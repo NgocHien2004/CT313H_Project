@@ -4,12 +4,14 @@
       <!-- Header -->
       <div class="mb-6">
         <div class="flex items-center space-x-4">
-          <router-link
-            to="/dishes"
-            class="text-gray-400 hover:text-gray-600"
-          >
+          <router-link to="/dishes" class="text-gray-400 hover:text-gray-600">
             <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 19l-7-7 7-7"
+              ></path>
             </svg>
           </router-link>
           <h1 class="text-2xl font-bold text-gray-900">
@@ -20,7 +22,9 @@
 
       <!-- Loading State -->
       <div v-if="loadingData" class="text-center py-12">
-        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+        <div
+          class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"
+        ></div>
         <p class="mt-2 text-sm text-gray-500">Đang tải dữ liệu...</p>
       </div>
 
@@ -44,9 +48,7 @@
 
           <!-- Description -->
           <div>
-            <label for="description" class="block text-sm font-medium text-gray-700">
-              Mô tả
-            </label>
+            <label for="description" class="block text-sm font-medium text-gray-700"> Mô tả </label>
             <textarea
               id="description"
               v-model="form.description"
@@ -83,12 +85,7 @@
             <label for="category_id" class="block text-sm font-medium text-gray-700">
               Danh mục <span class="text-red-500">*</span>
             </label>
-            <select
-              id="category_id"
-              v-model="form.category_id"
-              required
-              class="input-field"
-            >
+            <select id="category_id" v-model="form.category_id" required class="input-field">
               <option value="">Chọn danh mục</option>
               <option v-for="category in categories" :key="category.id" :value="category.id">
                 {{ category.name }}
@@ -98,10 +95,10 @@
 
           <!-- Image Upload -->
           <div>
-            <label class="block text-sm font-medium text-gray-700">
-              Hình ảnh món ăn
-            </label>
-            <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+            <label class="block text-sm font-medium text-gray-700"> Hình ảnh món ăn </label>
+            <div
+              class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md"
+            >
               <div class="space-y-1 text-center">
                 <!-- Preview Image -->
                 <div v-if="imagePreview" class="mb-4">
@@ -118,14 +115,27 @@
                     Xóa ảnh
                   </button>
                 </div>
-                
+
                 <!-- Upload Area -->
                 <div v-else>
-                  <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                  <svg
+                    class="mx-auto h-12 w-12 text-gray-400"
+                    stroke="currentColor"
+                    fill="none"
+                    viewBox="0 0 48 48"
+                  >
+                    <path
+                      d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
                   </svg>
                   <div class="flex text-sm text-gray-600">
-                    <label for="image" class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+                    <label
+                      for="image"
+                      class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
+                    >
                       <span>Tải lên ảnh</span>
                       <input
                         id="image"
@@ -173,18 +183,9 @@
 
           <!-- Actions -->
           <div class="flex justify-end space-x-4 pt-6 border-t">
-            <router-link
-              to="/dishes"
-              class="btn-secondary"
-            >
-              Hủy
-            </router-link>
-            <button
-              type="submit"
-              :disabled="loading"
-              class="btn-primary"
-            >
-              {{ loading ? 'Đang lưu...' : (isEdit ? 'Cập nhật' : 'Tạo món ăn') }}
+            <router-link to="/dishes" class="btn-secondary"> Hủy </router-link>
+            <button type="submit" :disabled="loading" class="btn-primary">
+              {{ loading ? 'Đang lưu...' : isEdit ? 'Cập nhật' : 'Tạo món ăn' }}
             </button>
           </div>
         </form>
@@ -220,7 +221,7 @@ const form = reactive({
   description: '',
   price: '',
   category_id: '',
-  is_available: true
+  is_available: true,
 })
 
 // Methods
@@ -238,16 +239,16 @@ const loadCategories = async () => {
 
 const loadDish = async () => {
   if (!isEdit.value) return
-  
+
   loadingData.value = true
   try {
     console.log('Loading dish with ID:', dishId.value)
-    
+
     // Get dish by ID - backend có route GET /dishes với query
     const response = await dishesAPI.getAll({ page: 1, limit: 1000 })
     const allDishes = response.data.data || []
-    const dish = allDishes.find(d => d.id == dishId.value)
-    
+    const dish = allDishes.find((d) => d.id == dishId.value)
+
     if (dish) {
       console.log('Dish found:', dish)
       Object.assign(form, {
@@ -255,9 +256,9 @@ const loadDish = async () => {
         description: dish.description || '',
         price: dish.price || '',
         category_id: dish.category_id || '',
-        is_available: dish.is_available !== false
+        is_available: dish.is_available !== false,
       })
-      
+
       if (dish.image_url) {
         imagePreview.value = `http://localhost:3000${dish.image_url}`
       }
@@ -289,14 +290,14 @@ const handleImageChange = (event) => {
   }
 
   imageFile.value = file
-  
+
   // Create preview
   const reader = new FileReader()
   reader.onload = (e) => {
     imagePreview.value = e.target.result
   }
   reader.readAsDataURL(file)
-  
+
   error.value = ''
 }
 
@@ -310,28 +311,28 @@ const removeImage = () => {
 
 const validateForm = () => {
   error.value = ''
-  
+
   if (!form.name?.trim()) {
     error.value = 'Vui lòng nhập tên món ăn'
     return false
   }
-  
+
   if (!form.price || form.price <= 0) {
     error.value = 'Vui lòng nhập giá hợp lệ'
     return false
   }
-  
+
   if (!form.category_id) {
     error.value = 'Vui lòng chọn danh mục'
     return false
   }
-  
+
   return true
 }
 
 const handleSubmit = async () => {
   console.log('Form submitted')
-  
+
   if (!validateForm()) {
     return
   }
@@ -358,7 +359,7 @@ const handleSubmit = async () => {
       price: form.price,
       category_id: form.category_id,
       is_available: form.is_available,
-      hasImage: !!imageFile.value
+      hasImage: !!imageFile.value,
     })
 
     let response
@@ -376,7 +377,6 @@ const handleSubmit = async () => {
     setTimeout(() => {
       router.push('/dishes')
     }, 1000)
-
   } catch (err) {
     console.error('Error saving dish:', err)
     if (err.response?.data?.error) {
@@ -395,7 +395,7 @@ const handleSubmit = async () => {
 onMounted(async () => {
   console.log('DishForm mounted, isEdit:', isEdit.value)
   loadingData.value = true
-  
+
   try {
     await loadCategories()
     if (isEdit.value) {

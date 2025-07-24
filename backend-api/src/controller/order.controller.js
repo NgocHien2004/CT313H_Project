@@ -52,10 +52,7 @@ exports.deleteOrder = async (req, res, next) => {
 
 exports.updateOrderItems = async (req, res, next) => {
   try {
-    const updatedOrder = await orderService.updateOrderItems(
-      req.params.id,
-      req.body.items
-    );
+    const updatedOrder = await orderService.updateOrderItems(req.params.id, req.body.items);
     res.json({ message: "Order items updated", data: updatedOrder });
   } catch (err) {
     next(err);

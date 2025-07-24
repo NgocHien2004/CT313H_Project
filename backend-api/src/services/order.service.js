@@ -33,18 +33,11 @@ exports.getAllOrders = async ({ limit, offset }) => {
 };
 
 exports.getOrdersByUser = async ({ userId, limit, offset }) => {
-  return await knex("orders")
-    .where({ user_id: userId })
-    .select("*")
-    .limit(limit)
-    .offset(offset);
+  return await knex("orders").where({ user_id: userId }).select("*").limit(limit).offset(offset);
 };
 
 exports.updateOrder = async (id, data) => {
-  const [order] = await knex("orders")
-    .where("id", id)
-    .update(data)
-    .returning("*");
+  const [order] = await knex("orders").where("id", id).update(data).returning("*");
   return order;
 };
 
@@ -68,10 +61,7 @@ exports.updateOrderItems = async (orderId, items) => {
   await knex("order_items").insert(newItems);
 
   const total = newItems.reduce((sum, i) => sum + i.quantity * i.price, 0);
-  const [updatedOrder] = await knex("orders")
-    .where("id", orderId)
-    .update({ total_amount: total })
-    .returning("*");
+  const [updatedOrder] = await knex("orders").where("id", orderId).update({ total_amount: total }).returning("*");
 
   return updatedOrder;
 };

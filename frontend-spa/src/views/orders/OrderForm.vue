@@ -48,7 +48,7 @@
             <!-- Loading -->
             <div v-if="dishesLoading" class="text-center py-8">
               <div
-                class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-primary-500"
+                class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"
               ></div>
               <p class="mt-2 text-sm text-gray-500">Đang tải món ăn...</p>
             </div>
@@ -61,35 +61,49 @@
               <div
                 v-for="dish in dishes"
                 :key="dish.id"
-                class="border border-gray-200 rounded-lg p-4 hover:border-primary-300 transition-colors cursor-pointer"
-                :class="{ 'border-primary-500 bg-primary-50': isInCart(dish.id) }"
-                @click="addToCart(dish)"
+                class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
               >
-                <div class="flex items-center space-x-3">
-                  <img
-                    :src="dish.image_url || '/placeholder-dish.jpg'"
-                    :alt="dish.name"
-                    class="w-12 h-12 object-cover rounded-lg"
-                    @error="handleImageError"
-                  />
-                  <div class="flex-1">
-                    <h3 class="font-medium text-gray-900">{{ dish.name }}</h3>
-                    <p class="text-sm text-gray-500">{{ formatCurrency(dish.price) }}</p>
-                    <span
-                      v-if="!dish.is_available"
-                      class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800"
-                    >
-                      Hết hàng
-                    </span>
+                <!-- Dish Image với loading state -->
+                <div class="aspect-square mb-3 bg-gray-100 rounded-lg overflow-hidden relative">
+                  <div
+                    v-if="imageLoadingStates[dish.id]"
+                    class="absolute inset-0 flex items-center justify-center"
+                  >
+                    <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
                   </div>
-                  <div v-if="isInCart(dish.id)" class="text-primary-600">
-                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path
-                        fill-rule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clip-rule="evenodd"
-                      ></path>
-                    </svg>
+                  <img
+                    :src="getImageUrl(dish)"
+                    :alt="dish.name"
+                    class="w-full h-full object-cover transition-opacity duration-200"
+                    :class="{ 'opacity-0': imageLoadingStates[dish.id] }"
+                    @load="handleImageLoad(dish.id)"
+                    @error="handleImageError($event, dish.id)"
+                  />
+                </div>
+
+                <div class="flex-1">
+                  <h3 class="font-medium text-gray-900 mb-1">{{ dish.name }}</h3>
+                  <p class="text-sm text-gray-500 mb-2 line-clamp-2">
+                    {{ dish.description || 'Không có mô tả' }}
+                  </p>
+                  <div class="flex items-center justify-between">
+                    <span class="font-bold text-blue-600">
+                      {{ formatCurrency(dish.price) }}
+                    </span>
+                    <button
+                      @click="addToCart(dish)"
+                      :disabled="!dish.is_available"
+                      :class="[
+                        'px-3 py-1 rounded text-sm font-medium transition-colors',
+                        dish.is_available
+                          ? isInCart(dish.id)
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed',
+                      ]"
+                    >
+                      {{ !dish.is_available ? 'Hết hàng' : isInCart(dish.id) ? 'Đã thêm' : 'Thêm' }}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -97,7 +111,7 @@
 
             <!-- Empty State -->
             <div v-else class="text-center py-8">
-              <p class="text-sm text-gray-500">Không tìm thấy món ăn nào</p>
+              <p class="text-gray-500">Không có món ăn nào.</p>
             </div>
           </div>
         </div>
@@ -107,37 +121,37 @@
           <div class="bg-white shadow-sm rounded-lg p-6 sticky top-6">
             <h2 class="text-lg font-medium text-gray-900 mb-4">Thông tin đơn hàng</h2>
 
-            <!-- Order Info -->
-            <div class="space-y-4 mb-4">
-              <div>
-                <label for="table_number" class="block text-sm font-medium text-gray-700">
-                  Số bàn <span class="text-red-500">*</span>
-                </label>
-                <input
-                  id="table_number"
-                  v-model.number="form.table_number"
-                  type="number"
-                  min="1"
-                  required
-                  class="input-field"
-                  placeholder="Nhập số bàn"
-                />
-              </div>
+            <!-- Table Number -->
+            <div class="mb-4">
+              <label for="table_number" class="block text-sm font-medium text-gray-700 mb-1">
+                Số bàn *
+              </label>
+              <input
+                id="table_number"
+                v-model="form.table_number"
+                type="number"
+                min="1"
+                required
+                class="input-field"
+                placeholder="Nhập số bàn"
+              />
             </div>
 
             <!-- Cart Items -->
-            <div class="space-y-3 mb-4">
-              <h3 class="text-sm font-medium text-gray-900">Món đã chọn</h3>
+            <div class="mb-4">
+              <h3 class="text-sm font-medium text-gray-700 mb-2">
+                Món đã chọn ({{ cartItems.length }})
+              </h3>
 
-              <div v-if="cartItems.length === 0" class="text-center py-4">
-                <p class="text-sm text-gray-500">Chưa có món nào được chọn</p>
+              <div v-if="cartItems.length === 0" class="text-center py-4 text-gray-500 text-sm">
+                Chưa có món nào được chọn
               </div>
 
-              <div v-else class="space-y-2 max-h-40 overflow-y-auto">
+              <div v-else class="space-y-2 max-h-64 overflow-y-auto">
                 <div
                   v-for="item in cartItems"
                   :key="item.dish_id"
-                  class="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+                  class="flex items-center justify-between p-2 bg-gray-50 rounded"
                 >
                   <div class="flex-1">
                     <p class="text-sm font-medium text-gray-900">{{ item.name }}</p>
@@ -146,40 +160,22 @@
                   <div class="flex items-center space-x-2">
                     <button
                       @click="decreaseQuantity(item.dish_id)"
-                      class="w-6 h-6 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center"
+                      class="w-6 h-6 flex items-center justify-center bg-gray-200 text-gray-600 rounded hover:bg-gray-300"
                     >
-                      <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                        <path
-                          fill-rule="evenodd"
-                          d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
-                          clip-rule="evenodd"
-                        ></path>
-                      </svg>
+                      -
                     </button>
                     <span class="text-sm font-medium w-8 text-center">{{ item.quantity }}</span>
                     <button
                       @click="increaseQuantity(item.dish_id)"
-                      class="w-6 h-6 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center"
+                      class="w-6 h-6 flex items-center justify-center bg-gray-200 text-gray-600 rounded hover:bg-gray-300"
                     >
-                      <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                        <path
-                          fill-rule="evenodd"
-                          d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-                          clip-rule="evenodd"
-                        ></path>
-                      </svg>
+                      +
                     </button>
                     <button
                       @click="removeFromCart(item.dish_id)"
-                      class="w-6 h-6 rounded-full bg-red-100 hover:bg-red-200 text-red-600 flex items-center justify-center ml-2"
+                      class="w-6 h-6 flex items-center justify-center bg-red-100 text-red-600 rounded hover:bg-red-200 ml-2"
                     >
-                      <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                        <path
-                          fill-rule="evenodd"
-                          d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                          clip-rule="evenodd"
-                        ></path>
-                      </svg>
+                      ×
                     </button>
                   </div>
                 </div>
@@ -187,25 +183,25 @@
             </div>
 
             <!-- Total -->
-            <div class="border-t pt-4 mb-4">
-              <div class="flex justify-between text-lg font-medium">
-                <span>Tổng cộng:</span>
-                <span>{{ formatCurrency(totalAmount) }}</span>
+            <div class="mb-4 p-3 bg-gray-50 rounded">
+              <div class="flex justify-between items-center">
+                <span class="font-medium text-gray-900">Tổng tiền:</span>
+                <span class="text-lg font-bold text-blue-600">
+                  {{ formatCurrency(totalAmount) }}
+                </span>
               </div>
             </div>
 
             <!-- Error Message -->
-            <div v-if="error" class="rounded-md bg-red-50 p-4 mb-4">
-              <div class="text-sm text-red-700">
-                {{ error }}
-              </div>
+            <div v-if="error" class="mb-4 p-3 bg-red-50 rounded">
+              <p class="text-sm text-red-700">{{ error }}</p>
             </div>
 
             <!-- Actions -->
-            <div class="space-y-3">
+            <div class="space-y-2">
               <button
                 @click="handleSubmit"
-                :disabled="loading || cartItems.length === 0 || !form.table_number"
+                :disabled="loading || cartItems.length === 0"
                 class="w-full btn-primary"
               >
                 {{ loading ? 'Đang tạo...' : 'Tạo đơn hàng' }}
@@ -241,6 +237,7 @@ const loading = ref(false)
 const error = ref('')
 const dishSearch = ref('')
 const selectedCategory = ref('')
+const imageLoadingStates = ref({}) // Track image loading states
 
 const form = reactive({
   table_number: '',
@@ -263,6 +260,32 @@ const debouncedDishSearch = () => {
   }, 500)
 }
 
+// Image handling methods
+const getImageUrl = (dish) => {
+  // If dish has uploaded image, use it
+  if (dish.image_url && dish.image_url.startsWith('/uploads/')) {
+    return `http://localhost:3000${dish.image_url}`
+  }
+
+  // If external URL fails, use placeholder
+  if (dish.image_url && dish.image_url.includes('loremflickr.com')) {
+    return '/placeholder-dish.jpg'
+  }
+
+  // Default placeholder
+  return '/placeholder-dish.jpg'
+}
+
+const handleImageLoad = (dishId) => {
+  imageLoadingStates.value[dishId] = false
+}
+
+const handleImageError = (event, dishId) => {
+  console.log('Image error for dish:', dishId)
+  event.target.src = '/placeholder-dish.jpg'
+  imageLoadingStates.value[dishId] = false
+}
+
 // Methods
 const loadDishes = async () => {
   dishesLoading.value = true
@@ -277,6 +300,11 @@ const loadDishes = async () => {
 
     const response = await dishesAPI.getAll(params)
     dishes.value = response.data.data || []
+
+    // Initialize image loading states
+    dishes.value.forEach((dish) => {
+      imageLoadingStates.value[dish.id] = true
+    })
   } catch (error) {
     console.error('Error loading dishes:', error)
     dishes.value = []
@@ -300,10 +328,6 @@ const formatCurrency = (amount) => {
     style: 'currency',
     currency: 'VND',
   }).format(amount)
-}
-
-const handleImageError = (event) => {
-  event.target.src = '/placeholder-dish.jpg'
 }
 
 const isInCart = (dishId) => {
