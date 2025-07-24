@@ -4,14 +4,14 @@ const inventoryController = require("../controller/inventory.controller");
 const checkRole = require("../middlewares/checkRole");
 const verifyToken = require("../middlewares/verifyToken");
 const validate = require("../middlewares/validate");
-const pagination = require("../middlewares/pagination"); // Thêm dòng này
+const pagination = require("../middlewares/pagination"); 
 const {
   createInventorySchema,
   updateInventorySchema,
 } = require("../schema/inventory.schema");
 
 // Lấy danh sách nguyên liệu tồn kho
-router.get("/", pagination(), inventoryController.getAllInventory); // Thêm pagination() vào đây
+router.get("/", pagination(), inventoryController.getAllInventory); 
 
 // Tạo mới nguyên liệu
 router.post(

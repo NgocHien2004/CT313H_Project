@@ -4,7 +4,7 @@ const orderController = require("../controller/order.controller");
 const verifyToken = require("../middlewares/verifyToken");
 const checkRole = require("../middlewares/checkRole");
 const validate = require("../middlewares/validate");
-const pagination = require("../middlewares/pagination"); // Thêm dòng này
+const pagination = require("../middlewares/pagination"); 
 const {
   createOrderSchema,
   updateOrderSchema,

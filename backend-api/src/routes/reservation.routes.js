@@ -3,8 +3,7 @@ const router = express.Router();
 const reservationController = require("../controller/reservation.controller");
 const validate = require("../middlewares/validate");
 const verifyToken = require("../middlewares/verifyToken");
-const checkRole = require("../middlewares/checkRole");
-const pagination = require("../middlewares/pagination"); // Thêm dòng này
+const pagination = require("../middlewares/pagination"); 
 const {
   createReservationSchema,
   updateReservationSchema,

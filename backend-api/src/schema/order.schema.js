@@ -14,4 +14,5 @@ exports.createOrderSchema = z3.object({
 exports.updateOrderSchema = z3.object({
   table_number: z3.number().int().min(1).optional(),
   note: z3.string().optional(),
+  status: z3.string().optional(),
 });

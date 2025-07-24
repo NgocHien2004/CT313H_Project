@@ -941,9 +941,6 @@
       "404NotFound": {
         "description": "Resource not found"
       },
-      "422Unprocessable": {
-        "description": "Unprocessable entity"
-      },
       "500Internal": {
         "description": "Internal server error"
       }

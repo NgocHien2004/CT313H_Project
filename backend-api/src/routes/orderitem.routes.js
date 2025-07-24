@@ -3,13 +3,39 @@ const router = express.Router();
 const orderItemController = require("../controller/orderitem.controller");
 const verifyToken = require("../middlewares/verifyToken");
 const checkRole = require("../middlewares/checkRole");
+const validate = require("../middlewares/validate");
+const {
+  createOrderItemSchema,
+  updateOrderItemSchema,
+} = require("../schema/orderitem.schema");
 
-// Lấy order items của một order, chỉ cho phép admin
-router.get(
-  "/:order_id",
+// GET all order items (admin only)
+router.get("/", verifyToken, orderItemController.getAll);
+
+// POST create new order item
+router.post(
+  "/",
   verifyToken,
   checkRole("admin"),
-  orderItemController.getByOrderId
+  validate(createOrderItemSchema),
+  orderItemController.create
+);
+
+// PUT update order item by id
+router.put(
+  "/:id",
+  verifyToken,
+  checkRole("admin"),
+  validate(updateOrderItemSchema),
+  orderItemController.update
+);
+
+// DELETE order item by id
+router.delete(
+  "/:id",
+  verifyToken,
+  checkRole("admin"),
+  orderItemController.remove
 );
 
 module.exports = router;

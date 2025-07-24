@@ -20,4 +20,5 @@ exports.updateReservationSchema = z5.object({
     })
     .optional(),
   note: z5.string().optional(),
+  status: z5.string().optional(),
 });
