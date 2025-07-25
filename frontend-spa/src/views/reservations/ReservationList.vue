@@ -456,7 +456,15 @@ const handleSubmit = async () => {
     closeModal()
   } catch (err) {
     console.error('Error saving reservation:', err)
-    error.value = err.response?.data?.error || 'Có lỗi xảy ra khi lưu đặt bàn'
+    const apiError = err.response?.data?.error
+
+    if (typeof apiError === 'object' && apiError?.message && apiError?.field) {
+      error.value = `${apiError.field}: ${apiError.message}`
+    } else if (typeof apiError === 'string') {
+      error.value = apiError
+    } else {
+      error.value = 'Có lỗi xảy ra khi lưu đặt bàn'
+    }
   } finally {
     submitting.value = false
   }

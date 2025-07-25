@@ -1,13 +1,25 @@
 const { ZodError } = require("zod");
 
-module.exports = (schema) => (req, res, next) => {
-  try {
-    req.body = schema.parse(req.body);
-    next();
-  } catch (err) {
-    if (err instanceof ZodError) {
-      return res.status(400).json({ error: err.errors });
+module.exports =
+  (schema, options = {}) =>
+  (req, res, next) => {
+    try {
+      req.body = schema.parse(req.body);
+      next();
+    } catch (err) {
+      if (err instanceof ZodError) {
+        const firstError = err.errors[0];
+        const field = firstError.path.join(".");
+        const label = options.fieldLabels?.[field] || field;
+
+        return res.status(400).json({
+          error: {
+            field: label,
+            message: firstError.message,
+          },
+        });
+      }
+
+      next(err);
     }
-    next(err);
-  }
-};
+  };

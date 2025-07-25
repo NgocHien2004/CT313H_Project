@@ -3,11 +3,21 @@ const router = express.Router();
 const reservationController = require("../controller/reservation.controller");
 const validate = require("../middlewares/validate");
 const verifyToken = require("../middlewares/verifyToken");
-const pagination = require("../middlewares/pagination"); 
+const pagination = require("../middlewares/pagination");
 const {
   createReservationSchema,
   updateReservationSchema,
 } = require("../schema/reservation.schema");
+
+// Label tiếng Việt cho các field đặt bàn
+const reservationFieldLabels = {
+  customer_name: "Tên khách hàng",
+  phone_number: "Số điện thoại",
+  number_of_guests: "Số lượng khách",
+  reservation_time: "Thời gian đặt bàn",
+  note: "Ghi chú",
+  status: "Trạng thái",
+};
 
 // Lấy tất cả đặt bàn
 router.get(
@@ -21,7 +31,7 @@ router.get(
 router.post(
   "/",
   verifyToken,
-  validate(createReservationSchema),
+  validate(createReservationSchema, { fieldLabels: reservationFieldLabels }),
   reservationController.createReservation
 );
 
@@ -29,7 +39,7 @@ router.post(
 router.put(
   "/:id",
   verifyToken,
-  validate(updateReservationSchema),
+  validate(updateReservationSchema, { fieldLabels: reservationFieldLabels }),
   reservationController.updateReservation
 );
 
