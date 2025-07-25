@@ -9,7 +9,16 @@ const {
   updateDishIngredientSchema,
 } = require("../schema/dishingredient.schema");
 
-router.get("/", dishIngredientController.getAllDishIngredients);
+router.get(
+  "/dish/:dishId",
+  dishIngredientController.getDishIngredientsByDishId
+);
+
+router.get(
+  "/with-ingredients",
+  dishIngredientController.getAllDishesWithIngredients
+);
+
 router.post(
   "/",
   verifyToken,
@@ -17,6 +26,7 @@ router.post(
   validate(createDishIngredientSchema),
   dishIngredientController.createDishIngredient
 );
+
 router.put(
   "/:id",
   verifyToken,
@@ -24,6 +34,7 @@ router.put(
   validate(updateDishIngredientSchema),
   dishIngredientController.updateDishIngredient
 );
+
 router.delete(
   "/:id",
   verifyToken,

@@ -154,6 +154,7 @@
                       Sửa
                     </button>
                     <button
+                      v-if="authStore.isAdmin"
                       @click="confirmDelete(reservation)"
                       class="text-red-600 hover:text-red-500"
                     >
@@ -320,6 +321,9 @@
 import { ref, reactive, onMounted } from 'vue'
 import AppLayout from '../../components/layout/AppLayout.vue'
 import { reservationsAPI } from '../../services/api'
+import { useAuthStore } from '@/stores/auth'
+
+const authStore = useAuthStore()
 
 // Data
 const reservations = ref([])

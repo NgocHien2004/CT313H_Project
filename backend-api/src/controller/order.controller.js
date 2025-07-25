@@ -50,10 +50,14 @@ exports.deleteOrder = async (req, res, next) => {
   }
 };
 
-exports.updateOrderItems = async (req, res, next) => {
+exports.getOrderById = async (req, res, next) => {
   try {
-    const updatedOrder = await orderService.updateOrderItems(req.params.id, req.body.items);
-    res.json({ message: "Order items updated", data: updatedOrder });
+    const orderId = req.params.id;
+    const order = await orderService.getOrderById(orderId);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+    res.json({ data: order });
   } catch (err) {
     next(err);
   }

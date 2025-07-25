@@ -1,10 +1,11 @@
 const service = require("../services/orderitem.service");
 
-// Lấy tất cả order items
-exports.getAll = async (req, res, next) => {
+// Lấy order items theo order id
+exports.getByOrderId = async (req, res, next) => {
   try {
-    const data = await service.getAllOrderItems();
-    res.json({ data });
+    const orderId = req.params.orderId;
+    const items = await service.getOrderItemsByOrderId(orderId);
+    res.json({ data: items });
   } catch (err) {
     next(err);
   }

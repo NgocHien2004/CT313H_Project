@@ -1,4 +1,5 @@
 const knex = require("../database/knex");
+const orderItemService = require("./orderitem.service");
 
 exports.createOrder = async (data) => {
   const [order] = await knex("orders")
@@ -33,11 +34,18 @@ exports.getAllOrders = async ({ limit, offset }) => {
 };
 
 exports.getOrdersByUser = async ({ userId, limit, offset }) => {
-  return await knex("orders").where({ user_id: userId }).select("*").limit(limit).offset(offset);
+  return await knex("orders")
+    .where({ user_id: userId })
+    .select("*")
+    .limit(limit)
+    .offset(offset);
 };
 
 exports.updateOrder = async (id, data) => {
-  const [order] = await knex("orders").where("id", id).update(data).returning("*");
+  const [order] = await knex("orders")
+    .where("id", id)
+    .update(data)
+    .returning("*");
   return order;
 };
 
@@ -45,23 +53,14 @@ exports.deleteOrder = async (id) => {
   return await knex("orders").where("id", id).del();
 };
 
-exports.updateOrderItems = async (orderId, items) => {
-  await knex("order_items").where("order_id", orderId).del();
+exports.getOrderById = async (orderId) => {
+  const order = await knex("orders").where("id", orderId).first();
+  if (!order) return null;
 
-  const dishes = await knex("dishes").select("id", "price");
-  const dishMap = Object.fromEntries(dishes.map((d) => [d.id, d.price]));
+  // Gọi hàm mới để lấy danh sách món ăn
+  const items = await orderItemService.getOrderItemsByOrderId(orderId);
 
-  const newItems = items.map((item) => ({
-    order_id: orderId,
-    dish_id: item.dish_id,
-    quantity: item.quantity,
-    price: dishMap[item.dish_id] || 0,
-  }));
+  order.items = items;
 
-  await knex("order_items").insert(newItems);
-
-  const total = newItems.reduce((sum, i) => sum + i.quantity * i.price, 0);
-  const [updatedOrder] = await knex("orders").where("id", orderId).update({ total_amount: total }).returning("*");
-
-  return updatedOrder;
+  return order;
 };

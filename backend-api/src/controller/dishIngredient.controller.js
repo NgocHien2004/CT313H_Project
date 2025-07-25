@@ -1,9 +1,20 @@
 const dishIngredientService = require("../services/dishingredient.service");
 
-exports.getAllDishIngredients = async (req, res, next) => {
+exports.getDishIngredientsByDishId = async (req, res, next) => {
   try {
-    const list = await dishIngredientService.getAllDishIngredients();
-    res.json(list);
+    const dishId = req.params.dishId;
+    const ingredients =
+      await dishIngredientService.getDishIngredientsByDishId(dishId);
+    res.json(ingredients);
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getAllDishesWithIngredients = async (req, res, next) => {
+  try {
+    const data = await dishIngredientService.getAllDishesWithIngredients();
+    res.json({ data });
   } catch (err) {
     next(err);
   }

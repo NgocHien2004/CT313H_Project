@@ -1,5 +1,5 @@
-// backend-api/src/services/dish.service.js
 const knex4 = require("../database/knex");
+const dishIngredientService = require("./dishingredient.service");
 
 exports.createDish = async (data) => {
   const [dish] = await knex4("dishes").insert(data).returning("*");
@@ -34,16 +34,41 @@ exports.getAllDishes = async ({ limit, offset, filters = {} }) => {
   const total = Number(totalRow.count);
 
   // Get data with pagination
-  const data = await query.orderBy("created_at", "desc").limit(limit).offset(offset);
+  const data = await query
+    .orderBy("created_at", "desc")
+    .limit(limit)
+    .offset(offset);
 
   return { data, total };
 };
 
 exports.updateDish = async (id, data) => {
-  const [dish] = await knex4("dishes").where("id", id).update(data).returning("*");
+  const [dish] = await knex4("dishes")
+    .where("id", id)
+    .update(data)
+    .returning("*");
   return dish;
 };
 
 exports.deleteDish = async (id) => {
   return await knex4("dishes").where("id", id).del();
+};
+
+exports.getDishWithIngredientsById = async (dishId) => {
+  // Lấy món ăn theo ID
+  const dish = await knex4("dishes").where("id", dishId).first();
+
+  if (!dish) {
+    return null;
+  }
+
+  // Lấy nguyên liệu của món ăn
+  const ingredients =
+    await dishIngredientService.getDishIngredientsByDishId(dishId);
+
+  // Gắn nguyên liệu vào dish
+  return {
+    ...dish,
+    ingredients,
+  };
 };

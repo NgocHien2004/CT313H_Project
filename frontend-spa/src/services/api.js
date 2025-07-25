@@ -106,12 +106,21 @@ export const dishesAPI = {
   delete: (id) => api.delete(`/dishes/${id}`),
 }
 
-// Orders API
+// Orders API - UPDATED WITH getById
 export const ordersAPI = {
   getAll: (params) => api.get('/orders', { params }),
+  getById: (id) => api.get(`/orders/${id}`),
   create: (orderData) => api.post('/orders', orderData),
   update: (id, orderData) => api.put(`/orders/${id}`, orderData),
   delete: (id) => api.delete(`/orders/${id}`),
+}
+
+// Order Items API - NEW
+export const orderItemsAPI = {
+  getByOrderId: (orderId) => api.get(`/order-items/order/${orderId}`),
+  create: (orderItemData) => api.post('/order-items', orderItemData),
+  update: (id, orderItemData) => api.put(`/order-items/${id}`, orderItemData),
+  delete: (id) => api.delete(`/order-items/${id}`),
 }
 
 // Inventory API

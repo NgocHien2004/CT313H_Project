@@ -13,13 +13,13 @@ router.get("/", verifyToken, pagination(), orderController.getAllOrders);
 // Tạo đơn hàng mới
 router.post("/", verifyToken, validate(createOrderSchema), orderController.createOrder);
 
-// Cập nhật thông tin đơn hàng (số bàn, ghi chú (chỉ admin))
-router.put("/:id", verifyToken, checkRole("admin"), validate(updateOrderSchema), orderController.updateOrder);
+// Cập nhật thông tin đơn hàng (số bàn, ghi chú)
+router.put("/:id", verifyToken, validate(updateOrderSchema), orderController.updateOrder);
 
 // Xoá đơn hàng (chỉ admin)
 router.delete("/:id", verifyToken, checkRole("admin"), orderController.deleteOrder);
 
-// Cập nhật toàn bộ món ăn trong đơn hàng (chỉ admin)
-router.put("/:id/items", verifyToken, checkRole("admin"), orderController.updateOrderItems);
+// Lấy đơn hàng theo ID
+router.get("/:id", verifyToken, orderController.getOrderById);
 
 module.exports = router;

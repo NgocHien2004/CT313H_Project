@@ -3,6 +3,7 @@ const router = express.Router();
 const reservationController = require("../controller/reservation.controller");
 const validate = require("../middlewares/validate");
 const verifyToken = require("../middlewares/verifyToken");
+const checkRole = require("../middlewares/checkRole");
 const pagination = require("../middlewares/pagination");
 const {
   createReservationSchema,
@@ -44,6 +45,6 @@ router.put(
 );
 
 // Xóa đặt bàn
-router.delete("/:id", verifyToken, reservationController.deleteReservation);
+router.delete("/:id", verifyToken, checkRole("admin"), reservationController.deleteReservation);
 
 module.exports = router;

@@ -24,7 +24,10 @@ exports.createDish = async (req, res, next) => {
       ...req.body,
       image_url,
       // Convert string boolean từ FormData thành actual boolean
-      is_available: req.body.is_available !== undefined ? convertStringBoolean(req.body.is_available) : true,
+      is_available:
+        req.body.is_available !== undefined
+          ? convertStringBoolean(req.body.is_available)
+          : true,
     };
 
     console.log("Processed data:", data);
@@ -111,5 +114,21 @@ exports.deleteDish = async (req, res, next) => {
       return res.status(400).json({ message: err.message });
     }
     next(err);
+  }
+};
+
+exports.getDishWithIngredientsById = async (req, res) => {
+  try {
+    const dishId = req.params.id;
+    const dish = await dishService.getDishWithIngredientsById(dishId);
+
+    if (!dish) {
+      return res.status(404).json({ message: "Món ăn không tồn tại" });
+    }
+
+    res.json(dish);
+  } catch (error) {
+    console.error("Lỗi khi lấy chi tiết món ăn:", error);
+    res.status(500).json({ message: "Lỗi server", error });
   }
 };

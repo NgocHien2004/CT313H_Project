@@ -5,11 +5,14 @@ const dishController = require("../controller/dish.controller");
 const verifyToken = require("../middlewares/verifyToken");
 const checkRole = require("../middlewares/checkRole");
 const { createDishSchema, updateDishSchema } = require("../schema/dish.schema");
-const pagination = require("../middlewares/pagination"); 
+const pagination = require("../middlewares/pagination");
 const validate = require("../middlewares/validate");
 
 // Lấy tất cả món ăn
-router.get("/", pagination(), dishController.getAllDishes); // Thêm pagination() vào đây
+router.get("/", pagination(), dishController.getAllDishes);
+
+// Lấy món ăn theo ID
+router.get("/:id/detail", dishController.getDishWithIngredientsById);
 
 // Tạo món ăn mới (kèm ảnh)
 router.post(

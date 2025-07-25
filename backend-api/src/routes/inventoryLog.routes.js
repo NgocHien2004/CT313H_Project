@@ -7,7 +7,7 @@ const verifyToken = require("../middlewares/verifyToken");
 const checkRole = require("../middlewares/checkRole");
 const pagination = require("../middlewares/pagination"); 
 
-router.get("/", verifyToken, pagination(), controller.getAllInventoryLogs); // Thêm pagination() vào đây
+router.get("/", verifyToken, pagination(), controller.getAllInventoryLogs);
 router.post(
   "/",
   verifyToken,
