@@ -116,7 +116,7 @@
                   </button>
                 </div>
 
-                <!-- Upload Area -->
+                <!-- Upload Interface -->
                 <div v-else>
                   <svg
                     class="mx-auto h-12 w-12 text-gray-400"
@@ -133,13 +133,14 @@
                   </svg>
                   <div class="flex text-sm text-gray-600">
                     <label
-                      for="image"
+                      for="file-upload"
                       class="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
                     >
-                      <span>Tải lên ảnh</span>
+                      <span>Tải lên file</span>
                       <input
-                        id="image"
+                        id="file-upload"
                         ref="imageInput"
+                        name="file-upload"
                         type="file"
                         accept="image/*"
                         class="sr-only"
@@ -152,19 +153,6 @@
                 </div>
               </div>
             </div>
-          </div>
-
-          <!-- Available Status -->
-          <div class="flex items-center">
-            <input
-              id="is_available"
-              v-model="form.is_available"
-              type="checkbox"
-              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label for="is_available" class="ml-2 block text-sm text-gray-900">
-              Món ăn có sẵn
-            </label>
           </div>
 
           <!-- Error Message -->
@@ -216,12 +204,12 @@ const imagePreview = ref('')
 const imageFile = ref(null)
 const imageInput = ref(null)
 
+// Form data - removed is_available field since it's now auto-calculated
 const form = reactive({
   name: '',
   description: '',
   price: '',
   category_id: '',
-  is_available: true,
 })
 
 // Methods
@@ -244,19 +232,19 @@ const loadDish = async () => {
   try {
     console.log('Loading dish with ID:', dishId.value)
 
-    // Get dish by ID - backend có route GET /dishes với query
+    // Get dish by ID - using existing API pattern
     const response = await dishesAPI.getAll({ page: 1, limit: 1000 })
     const allDishes = response.data.data || []
     const dish = allDishes.find((d) => d.id == dishId.value)
 
     if (dish) {
       console.log('Dish found:', dish)
+      // Only load the editable fields, ignore is_available since it's auto-calculated
       Object.assign(form, {
         name: dish.name || '',
         description: dish.description || '',
         price: dish.price || '',
         category_id: dish.category_id || '',
-        is_available: dish.is_available !== false,
       })
 
       if (dish.image_url) {
@@ -348,7 +336,9 @@ const handleSubmit = async () => {
     formData.append('description', form.description?.trim() || '')
     formData.append('price', parseFloat(form.price))
     formData.append('category_id', parseInt(form.category_id))
-    formData.append('is_available', form.is_available)
+
+    // Set default availability to true - it will be auto-calculated based on ingredients
+    formData.append('is_available', 'true')
 
     if (imageFile.value) {
       formData.append('image', imageFile.value)
@@ -358,7 +348,7 @@ const handleSubmit = async () => {
       name: form.name,
       price: form.price,
       category_id: form.category_id,
-      is_available: form.is_available,
+      is_available: true, // Default value
       hasImage: !!imageFile.value,
     })
 

@@ -61,7 +61,7 @@
       <!-- Dishes Grid -->
       <div v-else class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         <div
-          v-for="dish in dishes"
+          v-for="dish in dishesWithAvailabilityStatus"
           :key="dish.id"
           class="bg-white overflow-hidden shadow-sm rounded-lg hover:shadow-md transition-shadow"
         >
@@ -90,43 +90,70 @@
                   <span
                     :class="[
                       'px-2 py-1 text-xs font-semibold rounded-full',
-                      dish.is_available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800',
+                      dish.calculatedAvailability
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800',
                     ]"
                   >
-                    {{ dish.is_available ? 'Có sẵn' : 'Hết hàng' }}
+                    {{ dish.calculatedAvailability ? 'Có sẵn' : 'Hết hàng' }}
                   </span>
                 </div>
               </div>
             </div>
 
-            <!-- Actions -->
-            <div class="mt-4 space-y-2">
-              <!-- Recipe Button (All users) -->
-              <button
-                @click="goToRecipe(dish.id)"
-                class="w-full bg-emerald-50 text-emerald-700 text-center py-2 px-3 rounded-md text-sm font-medium hover:bg-emerald-100 transition-colors"
-              >
-                <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                </svg>
-                Xem công thức
-              </button>
-
-              <!-- Admin Actions -->
-              <div v-if="authStore.isAdmin" class="flex space-x-2">
-                <button
-                  @click="goToEdit(dish.id)"
-                  class="flex-1 bg-blue-50 text-blue-700 text-center py-2 px-3 rounded-md text-sm font-medium hover:bg-blue-100 transition-colors"
-                >
-                  Sửa
-                </button>
-                <button
-                  @click="confirmDelete(dish)"
-                  class="flex-1 bg-red-50 text-red-700 py-2 px-3 rounded-md text-sm font-medium hover:bg-red-100 transition-colors"
-                >
-                  Xóa
-                </button>
+            <!-- Ingredient Status Summary (show only if admin) -->
+            <div v-if="authStore.isAdmin && dish.ingredientStatus" class="mt-3 text-xs">
+              <div class="flex gap-2 text-gray-600">
+                <span v-if="dish.ingredientStatus.sufficient > 0" class="text-green-600">
+                  ✓ {{ dish.ingredientStatus.sufficient }} đủ
+                </span>
+                <span v-if="dish.ingredientStatus.insufficient > 0" class="text-yellow-600">
+                  ⚠ {{ dish.ingredientStatus.insufficient }} thiếu
+                </span>
+                <span v-if="dish.ingredientStatus.outOfStock > 0" class="text-red-600">
+                  ✗ {{ dish.ingredientStatus.outOfStock }} hết
+                </span>
               </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="mt-4 space-y-2 p-4 pt-0">
+            <!-- Recipe Button (All users) -->
+            <button
+              @click="goToRecipe(dish.id)"
+              class="w-full bg-emerald-50 text-emerald-700 text-center py-2 px-3 rounded-md text-sm font-medium hover:bg-emerald-100 transition-colors"
+            >
+              <svg
+                class="w-4 h-4 inline mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                ></path>
+              </svg>
+              Xem công thức
+            </button>
+
+            <!-- Admin Actions -->
+            <div v-if="authStore.isAdmin" class="flex space-x-2">
+              <button
+                @click="goToEdit(dish.id)"
+                class="flex-1 bg-blue-50 text-blue-700 text-center py-2 px-3 rounded-md text-sm font-medium hover:bg-blue-100 transition-colors"
+              >
+                Sửa
+              </button>
+              <button
+                @click="confirmDelete(dish)"
+                class="flex-1 bg-red-50 text-red-700 py-2 px-3 rounded-md text-sm font-medium hover:bg-red-100 transition-colors"
+              >
+                Xóa
+              </button>
             </div>
           </div>
         </div>
@@ -136,66 +163,71 @@
       <div v-if="!loading && dishes.length === 0" class="text-center py-12">
         <svg
           class="mx-auto h-12 w-12 text-gray-400"
-          stroke="currentColor"
           fill="none"
-          viewBox="0 0 48 48"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
         >
           <path
-            d="M34 40h10v-4a6 6 0 00-10.712-3.714M34 40H14m20 0v-4a9.971 9.971 0 00-.712-3.714M14 40H4v-4a6 6 0 0110.713-3.714M14 40v-4c0-1.313.253-2.566.713-3.714m0 0A10.003 10.003 0 0124 26c4.21 0 7.813 2.602 9.287 6.286M14 32.286C15.187 28.602 18.79 26 24 26s8.813 2.602 10 6.286"
-            stroke-width="2"
             stroke-linecap="round"
             stroke-linejoin="round"
+            stroke-width="2"
+            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
           />
         </svg>
-        <h3 class="mt-2 text-sm font-medium text-gray-900">Không có món ăn</h3>
-        <p class="mt-1 text-sm text-gray-500">Hãy thêm món ăn mới để bắt đầu.</p>
-        <div v-if="authStore.isAdmin" class="mt-6">
-          <button @click="goToCreate" class="btn-primary">Thêm món ăn đầu tiên</button>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">Không có món ăn nào</h3>
+        <p class="mt-1 text-sm text-gray-500">Bắt đầu bằng cách tạo món ăn mới.</p>
+        <div class="mt-6">
+          <button v-if="authStore.isAdmin" @click="goToCreate" class="btn-primary">
+            Thêm món ăn mới
+          </button>
         </div>
       </div>
 
       <!-- Pagination -->
-      <div v-if="!loading && dishes.length > 0" class="flex items-center justify-between">
-        <div class="flex-1 flex justify-between sm:hidden">
+      <div
+        v-if="totalPages > 1"
+        class="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6"
+      >
+        <div class="flex flex-1 justify-between sm:hidden">
           <button
             @click="changePage(currentPage - 1)"
             :disabled="currentPage === 1"
-            class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Trước
           </button>
           <button
             @click="changePage(currentPage + 1)"
             :disabled="currentPage === totalPages"
-            class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Sau
           </button>
         </div>
-        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+        <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
           <div>
             <p class="text-sm text-gray-700">
               Hiển thị
               <span class="font-medium">{{ (currentPage - 1) * limit + 1 }}</span>
               đến
               <span class="font-medium">{{ Math.min(currentPage * limit, total) }}</span>
-              trong
+              trong tổng số
               <span class="font-medium">{{ total }}</span>
               kết quả
             </p>
           </div>
           <div>
-            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+            <nav class="isolate inline-flex -space-x-px rounded-md shadow-sm">
               <button
                 @click="changePage(currentPage - 1)"
                 :disabled="currentPage === 1"
-                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span class="sr-only">Trang trước</span>
-                <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path
                     fill-rule="evenodd"
-                    d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+                    d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
                     clip-rule="evenodd"
                   />
                 </svg>
@@ -206,10 +238,10 @@
                 :key="page"
                 @click="changePage(page)"
                 :class="[
-                  'relative inline-flex items-center px-4 py-2 border text-sm font-medium',
                   page === currentPage
-                    ? 'z-10 bg-primary-50 border-primary-500 text-primary-600'
-                    : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50',
+                    ? 'bg-blue-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600'
+                    : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0',
+                  'relative inline-flex items-center px-4 py-2 text-sm font-semibold focus:z-20',
                 ]"
               >
                 {{ page }}
@@ -218,13 +250,13 @@
               <button
                 @click="changePage(currentPage + 1)"
                 :disabled="currentPage === totalPages"
-                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span class="sr-only">Trang sau</span>
-                <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path
                     fill-rule="evenodd"
-                    d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                    d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
                     clip-rule="evenodd"
                   />
                 </svg>
@@ -239,38 +271,35 @@
     <div
       v-if="showDeleteModal"
       class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
+      @click="closeDeleteModal"
     >
-      <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-        <div class="mt-3">
+      <div
+        class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white"
+        @click.stop
+      >
+        <div class="mt-3 text-center">
           <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
-            <svg
-              class="h-6 w-6 text-red-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 stroke-width="2"
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.081 16.5c-.77.833.192 2.5 1.732 2.5z"
-              />
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+              ></path>
             </svg>
           </div>
-          <div class="mt-2 text-center">
-            <h3 class="text-lg font-medium text-gray-900">Xác nhận xóa</h3>
-            <div class="mt-2 px-7 py-3">
-              <p class="text-sm text-gray-500">
-                Bạn có chắc chắn muốn xóa món ăn "{{ dishToDelete?.name }}"? 
-                Hành động này không thể hoàn tác.
-              </p>
-            </div>
-            <div class="flex gap-4 mt-4">
-              <button @click="closeDeleteModal" class="flex-1 btn-secondary">Hủy</button>
-              <button @click="deleteDish" :disabled="deleting" class="flex-1 btn-danger">
-                {{ deleting ? 'Đang xóa...' : 'Xóa' }}
-              </button>
-            </div>
+          <h3 class="text-lg font-medium text-gray-900 mt-2">Xóa món ăn</h3>
+          <div class="mt-2 px-7 py-3">
+            <p class="text-sm text-gray-500">
+              Bạn có chắc chắn muốn xóa món ăn "{{ dishToDelete?.name }}"? Hành động này không thể
+              hoàn tác.
+            </p>
+          </div>
+          <div class="flex gap-4 mt-4">
+            <button @click="closeDeleteModal" class="flex-1 btn-secondary">Hủy</button>
+            <button @click="deleteDish" :disabled="deleting" class="flex-1 btn-danger">
+              {{ deleting ? 'Đang xóa...' : 'Xóa' }}
+            </button>
           </div>
         </div>
       </div>
@@ -283,7 +312,31 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import AppLayout from '../../components/layout/AppLayout.vue'
-import { dishesAPI, categoriesAPI } from '../../services/api'
+import { dishesAPI, categoriesAPI, inventoryAPI } from '../../services/api'
+import axios from 'axios'
+
+// Create axios instance for direct API calls
+const axiosClient = axios.create({
+  baseURL: 'http://localhost:3000/api',
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
+
+// Add request interceptor to include auth token
+axiosClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
+  },
+)
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -291,6 +344,8 @@ const authStore = useAuthStore()
 // Data
 const dishes = ref([])
 const categories = ref([])
+const inventory = ref([])
+const dishIngredients = ref({}) // Store ingredients for each dish
 const loading = ref(false)
 const deleting = ref(false)
 const showDeleteModal = ref(false)
@@ -321,6 +376,54 @@ const visiblePages = computed(() => {
   }
 
   return pages
+})
+
+// Calculate availability status for each dish based on ingredients
+const dishesWithAvailabilityStatus = computed(() => {
+  return dishes.value.map((dish) => {
+    const ingredients = dishIngredients.value[dish.id] || []
+
+    // If no ingredients defined, use original availability
+    if (ingredients.length === 0) {
+      return {
+        ...dish,
+        calculatedAvailability: dish.is_available,
+        ingredientStatus: null,
+      }
+    }
+
+    // Calculate ingredient status counts
+    let sufficient = 0
+    let insufficient = 0
+    let outOfStock = 0
+
+    ingredients.forEach((ingredient) => {
+      const inventoryItem = inventory.value.find((inv) => inv.id === ingredient.inventory_id)
+      const currentQuantity = inventoryItem?.quantity || 0
+      const requiredQuantity = ingredient.quantity_required || 0
+
+      if (currentQuantity >= requiredQuantity) {
+        sufficient++
+      } else if (currentQuantity > 0) {
+        insufficient++
+      } else {
+        outOfStock++
+      }
+    })
+
+    // Dish is available only if ALL ingredients are sufficient
+    const calculatedAvailability = insufficient === 0 && outOfStock === 0
+
+    return {
+      ...dish,
+      calculatedAvailability,
+      ingredientStatus: {
+        sufficient,
+        insufficient,
+        outOfStock,
+      },
+    }
+  })
 })
 
 // Debounced search
@@ -368,6 +471,9 @@ const loadDishes = async () => {
 
     dishes.value = response.data.data || []
     total.value = response.data.total || 0
+
+    // Load ingredients for each dish
+    await loadDishIngredients()
   } catch (error) {
     console.error('Error loading dishes:', error)
     dishes.value = []
@@ -382,6 +488,50 @@ const loadCategories = async () => {
     categories.value = response.data || []
   } catch (error) {
     console.error('Error loading categories:', error)
+  }
+}
+
+const loadInventory = async () => {
+  try {
+    const response = await inventoryAPI.getAll({ limit: 100 })
+    inventory.value = response.data.data || []
+    console.log('Inventory loaded:', inventory.value.length, 'items')
+  } catch (error) {
+    console.error('Error loading inventory:', error)
+  }
+}
+
+const loadDishIngredients = async () => {
+  try {
+    // Load ingredients for all dishes
+    const ingredientsPromises = dishes.value.map(async (dish) => {
+      try {
+        const response = await axiosClient.get(`/dish-ingredients/dish/${dish.id}`)
+        return {
+          dishId: dish.id,
+          ingredients: response.data || [],
+        }
+      } catch (error) {
+        console.error(`Error loading ingredients for dish ${dish.id}:`, error)
+        return {
+          dishId: dish.id,
+          ingredients: [],
+        }
+      }
+    })
+
+    const results = await Promise.all(ingredientsPromises)
+
+    // Create a map of dish ID to ingredients
+    const newDishIngredients = {}
+    results.forEach((result) => {
+      newDishIngredients[result.dishId] = result.ingredients
+    })
+
+    dishIngredients.value = newDishIngredients
+    console.log('Dish ingredients loaded for', Object.keys(newDishIngredients).length, 'dishes')
+  } catch (error) {
+    console.error('Error loading dish ingredients:', error)
   }
 }
 
@@ -408,7 +558,8 @@ const getImageUrl = (dish) => {
 }
 
 const handleImageError = (event) => {
-  event.target.src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop'
+  event.target.src =
+    'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop'
 }
 
 const changePage = (page) => {
@@ -445,8 +596,8 @@ const deleteDish = async () => {
 }
 
 // Lifecycle
-onMounted(() => {
-  loadDishes()
-  loadCategories()
+onMounted(async () => {
+  await Promise.all([loadCategories(), loadInventory()])
+  await loadDishes() // Load dishes after categories and inventory are ready
 })
 </script>
