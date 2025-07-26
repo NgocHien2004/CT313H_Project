@@ -13,7 +13,8 @@ CREATE TABLE users (
 CREATE TABLE categories (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
-    description TEXT
+    description TEXT,
+    is_deleted BOOLEAN DEFAULT FALSE
 );
 
 -- DISHES: Món ăn
@@ -55,7 +56,8 @@ CREATE TABLE inventory (
     quantity INTEGER NOT NULL,
     unit VARCHAR(20),
     min_quantity INTEGER DEFAULT 5,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_deleted BOOLEAN DEFAULT FALSE
 );
 
 -- INVENTORY LOGS: Nhập kho, ghi chú

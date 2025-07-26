@@ -1,11 +1,38 @@
 const inventoryService = require("../services/inventory.service");
+const knex = require("../database/knex");
 
-exports.createInventory = async (req, res, next) => {
+exports.createInventory = async (req, res) => {
+  const { name, quantity, unit, min_quantity } = req.body;
+
+  const trx = await knex.transaction();
+
   try {
-    const item = await inventoryService.createInventory(req.body);
-    res.status(201).json({ message: "Inventory item added", data: item });
+    const [inventory] = await trx("inventory")
+      .insert({
+        name,
+        quantity,
+        unit,
+        min_quantity,
+        is_deleted: false,
+        updated_at: knex.fn.now(),
+      })
+      .returning("*");
+
+    await trx("inventory_logs").insert({
+      inventory_id: inventory.id,
+      quantity_added: inventory.quantity,
+      note: "Initial stock added",
+      created_at: knex.fn.now(),
+    });
+
+    await trx.commit();
+    res
+      .status(201)
+      .json({ message: "Inventory item created", data: inventory });
   } catch (err) {
-    next(err);
+    await trx.rollback();
+    console.error(err);
+    res.status(500).json({ message: "Failed to create inventory" });
   }
 };
 
@@ -16,30 +43,100 @@ exports.getAllInventory = async (req, res, next) => {
       limit: 10,
       offset: 0,
     };
-    const inventory = await inventoryService.getAllInventory({ limit, offset });
+
+    const inventory = await knex("inventory")
+      .select("*")
+      .where({ is_deleted: false })
+      .limit(limit)
+      .offset(offset);
+
     res.json({ data: inventory, page, limit });
   } catch (err) {
     next(err);
   }
 };
 
-exports.updateInventory = async (req, res, next) => {
+exports.updateInventory = async (req, res) => {
+  const { id } = req.params;
+  const { name, quantity, unit, min_quantity } = req.body;
+
+  const trx = await knex.transaction();
+
   try {
-    const item = await inventoryService.updateInventory(
-      req.params.id,
-      req.body
-    );
-    res.json({ message: "Inventory item updated", data: item });
+    const old = await trx("inventory").where({ id, is_deleted: false }).first();
+
+    if (!old) {
+      await trx.rollback();
+      return res.status(404).json({ message: "Inventory item not found" });
+    }
+
+    const updatedFields = {
+      updated_at: knex.fn.now(),
+    };
+
+    if (name !== undefined) updatedFields.name = name;
+    if (quantity !== undefined) updatedFields.quantity = quantity;
+    if (unit !== undefined) updatedFields.unit = unit;
+    if (min_quantity !== undefined) updatedFields.min_quantity = min_quantity;
+
+    const [updated] = await trx("inventory")
+      .where({ id })
+      .update(updatedFields)
+      .returning("*");
+
+    const delta = quantity !== undefined ? quantity - old.quantity : 0;
+    if (delta !== 0) {
+      await trx("inventory_logs").insert({
+        inventory_id: id,
+        quantity_added: delta,
+        note: "Manual quantity update",
+        created_at: knex.fn.now(),
+      });
+    }
+
+    await trx.commit();
+    res.json({ message: "Inventory updated", data: updated });
   } catch (err) {
-    next(err);
+    await trx.rollback();
+    console.error(err);
+    res.status(500).json({ message: "Failed to update inventory" });
   }
 };
 
-exports.deleteInventory = async (req, res, next) => {
+exports.deleteInventory = async (req, res) => {
+  const { id } = req.params;
+
+  const trx = await knex.transaction();
+
   try {
-    await inventoryService.deleteInventory(req.params.id);
-    res.json({ message: "Inventory item deleted" });
+    const inventory = await trx("inventory")
+      .where({ id, is_deleted: false })
+      .first();
+
+    if (!inventory) {
+      await trx.rollback();
+      return res.status(404).json({ message: "Inventory item not found" });
+    }
+
+    // Ghi log xoá
+    await trx("inventory_logs").insert({
+      inventory_id: id,
+      quantity_added: -inventory.quantity,
+      note: "Inventory item soft-deleted",
+      created_at: knex.fn.now(),
+    });
+
+    // Soft delete
+    await trx("inventory").where({ id }).update({
+      is_deleted: true,
+      updated_at: knex.fn.now(),
+    });
+
+    await trx.commit();
+    res.json({ message: "Inventory soft-deleted" });
   } catch (err) {
-    next(err);
+    await trx.rollback();
+    console.error("Lỗi khi xóa inventory:", err);
+    res.status(500).json({ message: "Failed to delete inventory" });
   }
 };

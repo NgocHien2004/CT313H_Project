@@ -14,11 +14,6 @@ router.get(
   dishIngredientController.getDishIngredientsByDishId
 );
 
-router.get(
-  "/with-ingredients",
-  dishIngredientController.getAllDishesWithIngredients
-);
-
 router.post(
   "/",
   verifyToken,

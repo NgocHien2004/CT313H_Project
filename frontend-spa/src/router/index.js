@@ -7,13 +7,13 @@ import Register from '../views/auth/Register.vue'
 import Dashboard from '../views/Dashboard.vue'
 import DishList from '../views/dishes/DishList.vue'
 import DishForm from '../views/dishes/DishForm.vue'
+import RecipeDetail from '../views/recipes/RecipeDetail.vue'
 import CategoryList from '../views/categories/CategoryList.vue'
 import OrderList from '../views/orders/OrderList.vue'
 import OrderForm from '../views/orders/OrderForm.vue'
 import UserList from '../views/users/UserList.vue'
 import InventoryList from '../views/inventory/InventoryList.vue'
 import ReservationList from '../views/reservations/ReservationList.vue'
-import DishIngredientList from '../views/dish-ingredients/DishIngredientList.vue'
 
 const routes = [
   {
@@ -57,6 +57,12 @@ const routes = [
     meta: { requiresAuth: true, requiresAdmin: true },
   },
   {
+    path: '/recipes/:id',
+    name: 'RecipeDetail',
+    component: RecipeDetail,
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/categories',
     name: 'CategoryList',
     component: CategoryList,
@@ -91,12 +97,6 @@ const routes = [
     name: 'ReservationList',
     component: ReservationList,
     meta: { requiresAuth: true },
-  },
-  {
-    path: '/dish-ingredients',
-    name: 'DishIngredientList',
-    component: DishIngredientList,
-    meta: { requiresAuth: true, requiresAdmin: true },
   },
 ]
 

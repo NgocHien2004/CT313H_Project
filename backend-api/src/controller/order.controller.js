@@ -1,5 +1,7 @@
 const orderService = require("../services/order.service");
 
+const knex = require("../database/knex");
+
 exports.createOrder = async (req, res, next) => {
   try {
     const order = await orderService.createOrder(req.body);
@@ -32,12 +34,64 @@ exports.getAllOrders = async (req, res, next) => {
   }
 };
 
-exports.updateOrder = async (req, res, next) => {
+exports.updateOrder = async (req, res) => {
+  const orderId = req.params.id;
+  const { table_number, status } = req.body;
+
+  const trx = await knex.transaction();
+
   try {
-    const order = await orderService.updateOrder(req.params.id, req.body);
-    res.json({ message: "Order updated", data: order });
+    // Lấy order hiện tại
+    const order = await trx("orders").where({ id: orderId }).first();
+
+    if (!order) {
+      await trx.rollback();
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // Nếu trạng thái chuyển thành 'completed', tiến hành trừ nguyên liệu
+    if (status && order.status !== "completed" && status === "completed") {
+      const orderItems = await trx("order_items").where({ order_id: orderId });
+
+      for (const item of orderItems) {
+        const ingredients = await trx("dish_ingredients").where({
+          dish_id: item.dish_id,
+        });
+
+        for (const ing of ingredients) {
+          const totalUsed = ing.quantity_required * item.quantity;
+
+          // Trừ trong inventory
+          await trx("inventory")
+            .where({ id: ing.inventory_id })
+            .decrement("quantity", totalUsed)
+            .update({ updated_at: knex.fn.now() });
+
+          // Ghi log
+          await trx("inventory_logs").insert({
+            inventory_id: ing.inventory_id,
+            quantity_added: -totalUsed,
+            note: `Used for order #${orderId}`,
+            created_at: knex.fn.now(),
+          });
+        }
+      }
+    }
+
+    // Cập nhật đơn hàng
+    await trx("orders")
+      .where({ id: orderId })
+      .update({
+        ...(table_number !== undefined && { table_number }),
+        ...(status && { status }),
+      });
+
+    await trx.commit();
+    res.json({ message: "Order updated successfully" });
   } catch (err) {
-    next(err);
+    console.error(err);
+    await trx.rollback();
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 

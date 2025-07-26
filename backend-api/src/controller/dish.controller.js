@@ -1,4 +1,3 @@
-// backend-api/src/controller/dish.controller.js
 const dishService = require("../services/dish.service");
 
 // Helper function to convert string boolean to actual boolean

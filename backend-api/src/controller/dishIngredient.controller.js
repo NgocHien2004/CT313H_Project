@@ -11,15 +11,6 @@ exports.getDishIngredientsByDishId = async (req, res, next) => {
   }
 };
 
-exports.getAllDishesWithIngredients = async (req, res, next) => {
-  try {
-    const data = await dishIngredientService.getAllDishesWithIngredients();
-    res.json({ data });
-  } catch (err) {
-    next(err);
-  }
-};
-
 exports.createDishIngredient = async (req, res, next) => {
   try {
     const result = await dishIngredientService.createDishIngredient(req.body);

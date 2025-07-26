@@ -32,8 +32,8 @@ exports.updateCategory = async (req, res, next) => {
 
 exports.deleteCategory = async (req, res, next) => {
   try {
-    await categoryService.deleteCategory(req.params.id);
-    res.json({ message: "Category deleted" });
+    const deleted = await categoryService.deleteCategory(req.params.id);
+    res.json({ message: "Category deleted", data: deleted });
   } catch (err) {
     next(err);
   }

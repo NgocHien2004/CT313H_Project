@@ -837,52 +837,6 @@
         }
       }
     },
-    "/dish-ingredients/with-ingredients": {
-      "get": {
-        "summary": "Get all dishes with their ingredients",
-        "tags": ["DishIngredient"],
-        "responses": {
-          "200": {
-            "description": "List of dishes with their ingredients",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "dish_id": { "type": "integer" },
-                          "dish_name": { "type": "string" },
-                          "ingredients": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "id": { "type": "integer" },
-                                "dish_id": { "type": "integer" },
-                                "name": { "type": "string" },
-                                "amount": { "type": "string" },
-                                "unit": { "type": "string", "nullable": true }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal server error"
-          }
-        }
-      }
-    },
     "/dish-ingredients": {
       "post": {
         "summary": "Create a new dish ingredient",

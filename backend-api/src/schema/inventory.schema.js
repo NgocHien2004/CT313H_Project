@@ -4,10 +4,12 @@ exports.createInventorySchema = z4.object({
   name: z4.string().min(1),
   quantity: z4.number().int().min(0),
   unit: z4.string().min(1),
+  min_quantity: z4.number().int().min(0),
 });
 
 exports.updateInventorySchema = z4.object({
   name: z4.string().optional(),
   quantity: z4.number().min(0).optional(),
   unit: z4.string().optional(),
+  min_quantity: z4.number().min(0).optional(),
 });

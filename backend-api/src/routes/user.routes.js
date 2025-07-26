@@ -4,8 +4,16 @@ const userController = require("../controller/users.controller");
 const verifyToken = require("../middlewares/verifyToken");
 const checkRole = require("../middlewares/checkRole");
 const validate = require("../middlewares/validate");
-const pagination = require("../middlewares/pagination"); 
+const pagination = require("../middlewares/pagination");
 const { createUserSchema, updateUserSchema } = require("../schema/user.schema");
+
+// Danh sách nhãn tiếng Việt
+const userFieldLabels = {
+  name: "Họ và tên",
+  email: "Email",
+  password: "Mật khẩu",
+  role: "Vai trò",
+};
 
 // Lấy danh sách người dùng
 router.get(
@@ -14,14 +22,14 @@ router.get(
   checkRole("admin"),
   pagination(),
   userController.getAllUsers
-); // Thêm pagination() vào đây
+);
 
 // Tạo người dùng mới
 router.post(
   "/",
   verifyToken,
   checkRole("admin"),
-  validate(createUserSchema),
+  validate(createUserSchema, { fieldLabels: userFieldLabels }),
   userController.createUser
 );
 
@@ -30,7 +38,7 @@ router.put(
   "/:id",
   verifyToken,
   checkRole("admin"),
-  validate(updateUserSchema),
+  validate(updateUserSchema, { fieldLabels: userFieldLabels }),
   userController.updateUser
 );
 

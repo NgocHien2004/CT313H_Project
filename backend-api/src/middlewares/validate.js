@@ -13,10 +13,7 @@ module.exports =
         const label = options.fieldLabels?.[field] || field;
 
         return res.status(400).json({
-          error: {
-            field: label,
-            message: firstError.message,
-          },
+          error: `${label}: ${firstError.message}`,
         });
       }
 
