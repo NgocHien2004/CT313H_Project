@@ -2,23 +2,26 @@
   <AppLayout>
     <div class="space-y-6">
       <!-- Header -->
-      <div class="md:flex md:items-center md:justify-between">
-        <div class="flex-1 min-w-0">
-          <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
-            Quản lý đơn hàng
-          </h2>
+      <div class="sm:flex sm:items-center sm:justify-between">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">Quản lý đơn hàng</h1>
+          <p class="mt-2 text-sm text-gray-700">Danh sách tất cả đơn hàng trong hệ thống.</p>
         </div>
-        <div class="mt-4 flex md:mt-0 md:ml-4">
-          <router-link to="/orders/create" class="btn-primary"> Tạo đơn hàng mới </router-link>
+        <div class="mt-4 sm:mt-0">
+          <router-link to="/orders/create" class="btn-primary">Tạo đơn hàng mới</router-link>
         </div>
       </div>
 
       <!-- Filters -->
-      <div class="bg-white shadow-sm rounded-lg p-6">
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div class="bg-white p-4 rounded-lg shadow-sm border">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700">Trạng thái</label>
-            <select v-model="filters.status" class="input-field" @change="debouncedSearch">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
+            <select
+              v-model="filters.status"
+              @change="debouncedSearch"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
               <option value="">Tất cả</option>
               <option value="pending">Đang chờ</option>
               <option value="completed">Hoàn thành</option>
@@ -27,46 +30,52 @@
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700">Số bàn</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Số bàn</label>
             <input
               v-model="filters.table_number"
-              type="text"
-              placeholder="Nhập số bàn..."
-              class="input-field"
               @input="debouncedSearch"
+              type="number"
+              placeholder="Nhập số bàn"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-700">Ngày</label>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Ngày</label>
             <input
               v-model="filters.date"
-              type="date"
-              class="input-field"
               @change="debouncedSearch"
+              type="date"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
       </div>
 
-      <!-- Loading -->
-      <div v-if="loading" class="text-center py-12">
-        <div
-          class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"
-        ></div>
-        <p class="mt-2 text-sm text-gray-500">Đang tải...</p>
-      </div>
+      <!-- Orders List -->
+      <div class="bg-white shadow-sm rounded-lg border">
+        <!-- Loading state -->
+        <div v-if="loading" class="text-center py-8">
+          <div
+            class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"
+          ></div>
+          <p class="mt-2 text-sm text-gray-500">Đang tải...</p>
+        </div>
 
-      <!-- Orders Table -->
-      <div v-else class="bg-white shadow overflow-hidden sm:rounded-md">
-        <div class="overflow-x-auto">
+        <!-- Empty state -->
+        <div v-else-if="orders.length === 0" class="text-center py-8">
+          <p class="text-gray-500">Không có đơn hàng nào.</p>
+        </div>
+
+        <!-- Orders table -->
+        <div v-else class="overflow-hidden">
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
                 <th
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
-                  Đơn hàng
+                  #ID
                 </th>
                 <th
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -97,30 +106,24 @@
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
               <tr v-for="order in orders" :key="order.id" class="hover:bg-gray-50">
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="flex items-center">
-                    <div>
-                      <div class="text-sm font-medium text-gray-900">#{{ order.id }}</div>
-                    </div>
-                  </div>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  #{{ order.id }}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm text-gray-900">Bàn {{ order.table_number }}</div>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  Bàn {{ order.table_number }}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm font-medium text-gray-900">
-                    {{ formatCurrency(order.total_amount) }}
-                  </div>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
+                  {{ formatCurrency(order.total_amount) }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <select
-                    v-model="order.status"
-                    @change="updateOrderStatus(order.id, order.status)"
-                    class="text-xs px-2 py-1 rounded border-0 ring-2 focus:ring-primary-500"
+                    :value="order.status"
+                    @change="updateOrderStatus(order.id, $event.target.value)"
+                    class="text-xs px-2 py-1 rounded-full border"
                     :class="{
-                      'bg-yellow-100 text-yellow-800': order.status === 'pending',
-                      'bg-green-100 text-green-800': order.status === 'completed',
-                      'bg-red-100 text-red-800': order.status === 'canceled',
+                      'bg-yellow-100 text-yellow-800 border-yellow-300': order.status === 'pending',
+                      'bg-green-100 text-green-800 border-green-300': order.status === 'completed',
+                      'bg-red-100 text-red-800 border-red-300': order.status === 'canceled',
                     }"
                   >
                     <option value="pending">Đang chờ</option>
@@ -131,20 +134,17 @@
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {{ formatDate(order.created_at) }}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                  <!-- View Details Button -->
+                <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
                   <button
                     @click="viewOrderDetails(order.id)"
-                    class="text-blue-600 hover:text-blue-900"
+                    class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-blue-700 bg-blue-100 hover:bg-blue-200"
                   >
-                    Xem chi tiết
+                    Chi tiết
                   </button>
-
-                  <!-- Delete Button -->
                   <button
                     v-if="authStore.isAdmin"
                     @click="confirmDelete(order)"
-                    class="text-red-600 hover:text-red-900 ml-4"
+                    class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200"
                   >
                     Xóa
                   </button>
@@ -152,49 +152,59 @@
               </tr>
             </tbody>
           </table>
-
-          <!-- Empty state -->
-          <div v-if="orders.length === 0" class="text-center py-12">
-            <p class="text-sm text-gray-500">Không có đơn hàng nào</p>
-          </div>
         </div>
 
         <!-- Pagination -->
-        <div v-if="totalPages > 1" class="pagination-container">
-          <nav class="pagination">
-            <button
-              @click="previousPage"
-              :disabled="currentPage === 1"
-              class="pagination-button"
-              :class="{ 'pagination-button-disabled': currentPage === 1 }"
-            >
-              Trước
-            </button>
+        <div v-if="totalPages > 1" class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center">
+              <p class="text-sm text-gray-700">
+                Hiển thị
+                <span class="font-medium">{{ (currentPage - 1) * limit + 1 }}</span>
+                đến
+                <span class="font-medium">{{ Math.min(currentPage * limit, total) }}</span>
+                trong
+                <span class="font-medium">{{ total }}</span>
+                kết quả
+              </p>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button
+                @click="previousPage"
+                :disabled="currentPage === 1"
+                class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Trước
+              </button>
 
-            <button
-              v-for="page in visiblePages"
-              :key="page"
-              @click="goToPage(page)"
-              class="pagination-button"
-              :class="{ 'pagination-button-active': currentPage === page }"
-            >
-              {{ page }}
-            </button>
+              <button
+                v-for="page in visiblePages"
+                :key="page"
+                @click="goToPage(page)"
+                :class="[
+                  'px-3 py-2 text-sm font-medium rounded-md',
+                  page === currentPage
+                    ? 'bg-blue-600 text-white border border-blue-600'
+                    : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50',
+                ]"
+              >
+                {{ page }}
+              </button>
 
-            <button
-              @click="nextPage"
-              :disabled="currentPage === totalPages"
-              class="pagination-button"
-              :class="{ 'pagination-button-disabled': currentPage === totalPages }"
-            >
-              Sau
-            </button>
-          </nav>
+              <button
+                @click="nextPage"
+                :disabled="currentPage === totalPages"
+                class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Sau
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Delete Modal -->
+    <!-- Delete Confirmation Modal -->
     <div
       v-if="showDeleteModal"
       class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
@@ -204,20 +214,20 @@
         class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white"
         @click.stop
       >
-        <div class="mt-3">
+        <div class="mt-3 text-center">
           <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
             <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 stroke-width="2"
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
               ></path>
             </svg>
           </div>
-          <div class="mt-2 text-center">
-            <h3 class="text-lg leading-6 font-medium text-gray-900">Xác nhận xóa</h3>
-            <p class="mt-2 text-sm text-gray-500">
+          <h3 class="text-lg font-medium text-gray-900 mt-2">Xác nhận xóa</h3>
+          <div class="mt-2 px-7 py-3">
+            <p class="text-sm text-gray-500">
               Bạn có chắc chắn muốn xóa đơn hàng #{{ orderToDelete?.id }}? Hành động này không thể
               hoàn tác.
             </p>
@@ -239,7 +249,7 @@
       @click="closeDetailsModal"
     >
       <div
-        class="relative top-10 mx-auto p-5 border max-w-4xl shadow-lg rounded-md bg-white"
+        class="relative top-10 mx-auto p-5 border max-w-6xl shadow-lg rounded-md bg-white"
         @click.stop
       >
         <div class="mt-3">
@@ -268,129 +278,185 @@
           </div>
 
           <!-- Order Details Content -->
-          <div v-else-if="selectedOrder">
-            <!-- Order Info -->
-            <div class="bg-gray-50 p-4 rounded-lg mb-4">
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div>
-                  <span class="font-medium text-gray-700">Số bàn:</span>
-                  <p class="text-gray-900">Bàn {{ selectedOrder.table_number }}</p>
+          <div v-else-if="selectedOrder" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Left Column: Order Info and Current Items -->
+            <div class="space-y-6">
+              <!-- Order Info -->
+              <div class="bg-gray-50 p-4 rounded-lg">
+                <h4 class="text-md font-medium text-gray-900 mb-3">Thông tin đơn hàng</h4>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span class="font-medium text-gray-700">Số bàn:</span>
+                    <p class="text-gray-900">Bàn {{ selectedOrder.table_number }}</p>
+                  </div>
+                  <div>
+                    <span class="font-medium text-gray-700">Trạng thái:</span>
+                    <p class="text-gray-900">{{ getStatusText(selectedOrder.status) }}</p>
+                  </div>
+                  <div>
+                    <span class="font-medium text-gray-700">Tổng tiền:</span>
+                    <p class="text-gray-900 font-semibold">
+                      {{ formatCurrency(selectedOrder.total_amount) }}
+                    </p>
+                  </div>
+                  <div>
+                    <span class="font-medium text-gray-700">Thời gian:</span>
+                    <p class="text-gray-900">{{ formatDate(selectedOrder.created_at) }}</p>
+                  </div>
                 </div>
-                <div>
-                  <span class="font-medium text-gray-700">Trạng thái:</span>
-                  <p class="text-gray-900">{{ getStatusText(selectedOrder.status) }}</p>
+              </div>
+
+              <!-- Current Order Items -->
+              <div>
+                <h4 class="text-md font-medium text-gray-900 mb-3">
+                  Món ăn trong đơn ({{ selectedOrder.items?.length || 0 }} món)
+                </h4>
+
+                <div v-if="selectedOrder.items && selectedOrder.items.length > 0" class="space-y-3">
+                  <div
+                    v-for="item in selectedOrder.items"
+                    :key="item.id"
+                    class="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+                  >
+                    <div class="flex items-center space-x-4">
+                      <!-- Dish Image -->
+                      <div class="flex-shrink-0">
+                        <img
+                          :src="getItemImageUrl(item)"
+                          :alt="item.dish_name"
+                          @error="handleImageError"
+                          class="h-16 w-16 object-cover rounded-lg"
+                        />
+                      </div>
+
+                      <!-- Dish Info -->
+                      <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-gray-900">{{ item.dish_name }}</p>
+                        <p class="text-sm text-gray-500 mt-1">
+                          {{ formatCurrency(item.price) }} x {{ item.quantity }}
+                        </p>
+                      </div>
+                    </div>
+
+                    <!-- Quantity Controls and Price -->
+                    <div class="flex items-center space-x-4">
+                      <div class="flex items-center space-x-2">
+                        <button
+                          @click="updateOrderItemQuantity(item.id, item.quantity - 1)"
+                          :disabled="updatingItem === item.id"
+                          class="w-6 h-6 flex items-center justify-center bg-gray-100 text-gray-600 rounded hover:bg-gray-200 disabled:opacity-50"
+                        >
+                          -
+                        </button>
+                        <span class="w-8 text-center font-medium">{{ item.quantity }}</span>
+                        <button
+                          @click="updateOrderItemQuantity(item.id, item.quantity + 1)"
+                          :disabled="updatingItem === item.id"
+                          class="w-6 h-6 flex items-center justify-center bg-gray-100 text-gray-600 rounded hover:bg-gray-200 disabled:opacity-50"
+                        >
+                          +
+                        </button>
+                      </div>
+                      <div class="text-right">
+                        <p class="text-sm font-medium text-gray-900">
+                          {{ formatCurrency(item.price * item.quantity) }}
+                        </p>
+                      </div>
+                      <button
+                        @click="confirmDeleteOrderItem(item)"
+                        class="ml-2 text-red-600 hover:text-red-800"
+                      >
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          ></path>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <span class="font-medium text-gray-700">Tổng tiền:</span>
-                  <p class="text-gray-900 font-semibold">
-                    {{ formatCurrency(selectedOrder.total_amount) }}
-                  </p>
-                </div>
-                <div>
-                  <span class="font-medium text-gray-700">Thời gian:</span>
-                  <p class="text-gray-900">{{ formatDate(selectedOrder.created_at) }}</p>
+
+                <div v-else class="text-center py-4 text-gray-500">
+                  Đơn hàng chưa có món ăn nào.
                 </div>
               </div>
             </div>
 
-            <!-- Order Items -->
-            <div>
-              <h4 class="text-md font-medium text-gray-900 mb-3">
-                Món ăn ({{ selectedOrder.items?.length || 0 }} món)
-              </h4>
+            <!-- Right Column: Add Dishes -->
+            <div class="space-y-6">
+              <div class="bg-blue-50 p-4 rounded-lg">
+                <h4 class="text-md font-medium text-gray-900 mb-3">Thêm món ăn vào đơn hàng</h4>
 
-              <div v-if="selectedOrder.items && selectedOrder.items.length > 0" class="space-y-3">
-                <div
-                  v-for="item in selectedOrder.items"
-                  :key="item.id"
-                  class="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
-                >
-                  <div class="flex items-center space-x-4">
-                    <!-- Dish Image -->
-                    <div class="flex-shrink-0">
-                      <img
-                        :src="getImageUrl(item)"
-                        :alt="item.dish_name"
-                        @error="handleImageError"
-                        class="h-16 w-16 object-cover rounded-lg"
-                      />
+                <!-- Search and filter dishes -->
+                <div class="space-y-3 mb-4">
+                  <input
+                    v-model="dishSearchInModal"
+                    @input="debouncedDishSearch"
+                    type="text"
+                    placeholder="Tìm kiếm món ăn..."
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <select
+                    v-model="selectedCategoryInModal"
+                    @change="loadDishesInModal"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Tất cả danh mục</option>
+                    <option v-for="category in categories" :key="category.id" :value="category.id">
+                      {{ category.name }}
+                    </option>
+                  </select>
+                </div>
+
+                <!-- Available dishes list -->
+                <div v-if="loadingDishes" class="text-center py-4">
+                  <div
+                    class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"
+                  ></div>
+                  <p class="text-sm text-gray-500 mt-2">Đang tải món ăn...</p>
+                </div>
+
+                <div v-else class="max-h-96 overflow-y-auto space-y-2">
+                  <div
+                    v-for="dish in availableDishes"
+                    :key="dish.id"
+                    class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+                  >
+                    <div class="flex items-center space-x-3">
+                      <!-- Dish Image -->
+                      <div class="flex-shrink-0">
+                        <img
+                          :src="getDishImageUrl(dish)"
+                          :alt="dish.name"
+                          @error="handleImageError"
+                          class="h-12 w-12 object-cover rounded"
+                        />
+                      </div>
+
+                      <!-- Dish Info -->
+                      <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-gray-900">{{ dish.name }}</p>
+                        <p class="text-xs text-blue-600">{{ formatCurrency(dish.price) }}</p>
+                      </div>
                     </div>
 
-                    <!-- Dish Info -->
-                    <div class="flex-1 min-w-0">
-                      <p class="text-sm font-medium text-gray-900">{{ item.dish_name }}</p>
-                      <p v-if="item.dish_description" class="text-sm text-gray-500 mt-1">
-                        {{ item.dish_description }}
-                      </p>
-                      <p v-if="item.category_name" class="text-xs text-blue-600 mt-1">
-                        {{ item.category_name }}
-                      </p>
-                    </div>
-                  </div>
-
-                  <!-- Quantity Controls and Price -->
-                  <div class="flex items-center space-x-4">
-                    <!-- Quantity Controls -->
-                    <div class="flex items-center space-x-2">
-                      <button
-                        @click="decreaseQuantity(item)"
-                        :disabled="item.quantity <= 1 || updatingItem === item.id"
-                        class="w-8 h-8 flex items-center justify-center bg-gray-200 text-gray-600 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        -
-                      </button>
-                      <span class="text-sm font-medium w-8 text-center">{{ item.quantity }}</span>
-                      <button
-                        @click="increaseQuantity(item)"
-                        :disabled="updatingItem === item.id"
-                        class="w-8 h-8 flex items-center justify-center bg-gray-200 text-gray-600 rounded hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        +
-                      </button>
-                    </div>
-
-                    <!-- Price Info -->
-                    <div class="text-right">
-                      <p class="text-sm font-medium text-gray-900">
-                        {{ item.quantity }} x {{ formatCurrency(item.price) }}
-                      </p>
-                      <p class="text-sm font-semibold text-gray-900">
-                        = {{ formatCurrency(item.quantity * item.price) }}
-                      </p>
-                    </div>
-
-                    <!-- Delete Button -->
+                    <!-- Add Button -->
                     <button
-                      @click="confirmDeleteItem(item)"
-                      :disabled="updatingItem === item.id"
-                      class="ml-2 text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Xóa món ăn"
+                      @click="addDishToOrder(dish)"
+                      :disabled="!dish.is_available || addingDish === dish.id"
+                      class="px-3 py-1 text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1H8a1 1 0 00-1 1v3M4 7h16"
-                        ></path>
-                      </svg>
+                      {{ addingDish === dish.id ? 'Đang thêm...' : 'Thêm' }}
                     </button>
                   </div>
+
+                  <div v-if="availableDishes.length === 0" class="text-center py-4 text-gray-500">
+                    Không tìm thấy món ăn nào.
+                  </div>
                 </div>
-              </div>
-
-              <div v-else class="text-center py-8 text-gray-500">
-                Không có món ăn nào trong đơn hàng này
-              </div>
-            </div>
-
-            <!-- Total -->
-            <div class="mt-6 border-t pt-4">
-              <div class="flex justify-between items-center">
-                <span class="text-lg font-medium text-gray-900">Tổng cộng:</span>
-                <span class="text-lg font-bold text-gray-900">
-                  {{ formatCurrency(selectedOrder.total_amount) }}
-                </span>
               </div>
             </div>
           </div>
@@ -398,7 +464,7 @@
       </div>
     </div>
 
-    <!-- Delete Item Confirmation Modal -->
+    <!-- Delete Order Item Modal -->
     <div
       v-if="showDeleteItemModal"
       class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
@@ -408,21 +474,22 @@
         class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white"
         @click.stop
       >
-        <div class="mt-3">
+        <div class="mt-3 text-center">
           <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
             <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 stroke-width="2"
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
               ></path>
             </svg>
           </div>
-          <div class="mt-2 text-center">
-            <h3 class="text-lg leading-6 font-medium text-gray-900">Xác nhận xóa món ăn</h3>
-            <p class="mt-2 text-sm text-gray-500">
-              Bạn có chắc chắn muốn xóa món "{{ itemToDelete?.dish_name }}" khỏi đơn hàng này?
+          <h3 class="text-lg font-medium text-gray-900 mt-2">Xác nhận xóa món</h3>
+          <div class="mt-2 px-7 py-3">
+            <p class="text-sm text-gray-500">
+              Bạn có chắc chắn muốn xóa món "{{ itemToDelete?.dish_name }}" khỏi đơn hàng? Hành động
+              này không thể hoàn tác.
             </p>
           </div>
           <div class="flex gap-4 mt-4">
@@ -439,7 +506,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { ordersAPI, orderItemsAPI } from '@/services/api'
+import { ordersAPI, orderItemsAPI, dishesAPI, categoriesAPI } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import AppLayout from '@/components/layout/AppLayout.vue'
 
@@ -473,6 +540,17 @@ const showDeleteItemModal = ref(false)
 const itemToDelete = ref(null)
 const deletingItem = ref(false)
 
+// Add dish to order state
+const availableDishes = ref([])
+const categories = ref([])
+const loadingDishes = ref(false)
+const addingDish = ref(null)
+const dishSearchInModal = ref('')
+const selectedCategoryInModal = ref('')
+
+// Store dishes data to get image URLs
+const dishesDataMap = ref({})
+
 // Computed
 const totalPages = computed(() => Math.ceil(total.value / limit.value))
 
@@ -495,6 +573,14 @@ const debouncedSearch = () => {
   searchTimeout = setTimeout(() => {
     currentPage.value = 1
     loadOrders()
+  }, 500)
+}
+
+let dishSearchTimeout = null
+const debouncedDishSearch = () => {
+  clearTimeout(dishSearchTimeout)
+  dishSearchTimeout = setTimeout(() => {
+    loadDishesInModal()
   }, 500)
 }
 
@@ -536,6 +622,13 @@ const viewOrderDetails = async (orderId) => {
 
     selectedOrder.value = response.data.data
     console.log('Frontend: Selected order set to:', selectedOrder.value)
+
+    // Load all dishes to get image URLs and other details
+    await loadAllDishes()
+
+    // Load dishes and categories for adding new dishes
+    await loadDishesInModal()
+    await loadCategories()
   } catch (error) {
     console.error('Frontend: Error loading order details:', error)
     console.error('Frontend: Error response:', error.response)
@@ -552,6 +645,133 @@ const viewOrderDetails = async (orderId) => {
 const closeDetailsModal = () => {
   showDetailsModal.value = false
   selectedOrder.value = null
+  dishSearchInModal.value = ''
+  selectedCategoryInModal.value = ''
+  availableDishes.value = []
+}
+
+// Load all dishes to create a map for getting dish details
+const loadAllDishes = async () => {
+  try {
+    const response = await dishesAPI.getAll({ limit: 1000 })
+    const dishes = response.data.data || []
+
+    // Create a map for quick lookup
+    dishesDataMap.value = {}
+    dishes.forEach((dish) => {
+      dishesDataMap.value[dish.id] = dish
+    })
+  } catch (error) {
+    console.error('Error loading all dishes:', error)
+  }
+}
+
+// Load dishes for adding to order
+const loadDishesInModal = async () => {
+  loadingDishes.value = true
+  try {
+    const params = {
+      limit: 50,
+      is_available: true,
+    }
+
+    if (dishSearchInModal.value) params.search = dishSearchInModal.value
+    if (selectedCategoryInModal.value) params.category_id = selectedCategoryInModal.value
+
+    const response = await dishesAPI.getAll(params)
+    availableDishes.value = response.data.data || []
+  } catch (error) {
+    console.error('Error loading dishes:', error)
+    availableDishes.value = []
+  } finally {
+    loadingDishes.value = false
+  }
+}
+
+const loadCategories = async () => {
+  try {
+    const response = await categoriesAPI.getAll()
+    categories.value = response.data || []
+  } catch (error) {
+    console.error('Error loading categories:', error)
+    categories.value = []
+  }
+}
+
+// Add dish to current order
+const addDishToOrder = async (dish) => {
+  if (!selectedOrder.value || !dish.is_available) return
+
+  addingDish.value = dish.id
+  try {
+    // Check if dish already exists in order
+    const existingItem = selectedOrder.value.items?.find(
+      (item) => item.dish_id === parseInt(dish.id),
+    )
+
+    if (existingItem) {
+      // If dish already exists, update quantity instead of creating new item
+      const newQuantity = existingItem.quantity + 1
+      await updateOrderItemQuantity(existingItem.id, newQuantity)
+      console.log('Updated existing item quantity')
+    } else {
+      // If dish doesn't exist, create new order item
+      const orderItemData = {
+        order_id: parseInt(selectedOrder.value.id),
+        dish_id: parseInt(dish.id),
+        quantity: 1,
+        price: parseFloat(dish.price),
+      }
+
+      console.log('Adding new dish to order:', orderItemData)
+      const response = await orderItemsAPI.create(orderItemData)
+      console.log('Order item created:', response.data)
+
+      // Add the new item to the selected order's items
+      // Handle different response structures
+      const createdItem = response.data.data || response.data
+      const newItem = {
+        id: createdItem.id,
+        dish_id: parseInt(dish.id),
+        dish_name: dish.name,
+        quantity: 1,
+        price: parseFloat(dish.price),
+      }
+
+      if (!selectedOrder.value.items) {
+        selectedOrder.value.items = []
+      }
+      selectedOrder.value.items.push(newItem)
+
+      // Update the total amount
+      selectedOrder.value.total_amount = selectedOrder.value.items.reduce(
+        (sum, item) => sum + parseFloat(item.quantity) * parseFloat(item.price),
+        0,
+      )
+
+      // Update the order in the main orders list
+      const orderInList = orders.value.find((o) => o.id === selectedOrder.value.id)
+      if (orderInList) {
+        orderInList.total_amount = selectedOrder.value.total_amount
+      }
+
+      console.log('Successfully added new dish to order')
+    }
+  } catch (error) {
+    console.error('Error adding dish to order:', error)
+    console.error('Error response:', error.response)
+
+    let errorMessage = 'Có lỗi xảy ra khi thêm món ăn vào đơn hàng'
+    if (error.response?.data?.error) {
+      errorMessage = error.response.data.error
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    }
+
+    alert(errorMessage)
+  } finally {
+    addingDish.value = null
+  }
 }
 
 // Order item management functions
@@ -559,16 +779,50 @@ const updateOrderItemQuantity = async (orderItemId, newQuantity) => {
   try {
     updatingItem.value = orderItemId
 
+    // If quantity is 0 or less, delete the item instead
+    if (newQuantity <= 0) {
+      const itemToRemove = selectedOrder.value.items.find((item) => item.id === orderItemId)
+      if (itemToRemove) {
+        await orderItemsAPI.delete(orderItemId)
+
+        // Remove item from local state
+        selectedOrder.value.items = selectedOrder.value.items.filter(
+          (item) => item.id !== orderItemId,
+        )
+
+        // Check if order has no items left, then delete the order
+        if (selectedOrder.value.items.length === 0) {
+          await deleteEmptyOrder()
+          return
+        }
+
+        // Recalculate order total
+        selectedOrder.value.total_amount = selectedOrder.value.items.reduce(
+          (sum, item) => sum + parseFloat(item.quantity) * parseFloat(item.price),
+          0,
+        )
+
+        // Update the order in the main orders list
+        const orderInList = orders.value.find((o) => o.id === selectedOrder.value.id)
+        if (orderInList) {
+          orderInList.total_amount = selectedOrder.value.total_amount
+        }
+
+        console.log('Item automatically removed due to quantity 0')
+      }
+      return
+    }
+
     // Call API to update order item quantity
-    await orderItemsAPI.update(orderItemId, { quantity: newQuantity })
+    await orderItemsAPI.update(orderItemId, { quantity: parseInt(newQuantity) })
 
     // Update local state
     const item = selectedOrder.value.items.find((item) => item.id === orderItemId)
     if (item) {
-      item.quantity = newQuantity
+      item.quantity = parseInt(newQuantity)
       // Recalculate order total
       selectedOrder.value.total_amount = selectedOrder.value.items.reduce(
-        (sum, item) => sum + item.quantity * item.price,
+        (sum, item) => sum + parseFloat(item.quantity) * parseFloat(item.price),
         0,
       )
     }
@@ -580,23 +834,13 @@ const updateOrderItemQuantity = async (orderItemId, newQuantity) => {
     }
   } catch (error) {
     console.error('Error updating order item quantity:', error)
-    alert('Có lỗi xảy ra khi cập nhật số lượng món ăn')
+    alert('Có lỗi xảy ra khi cập nhật số lượng')
   } finally {
     updatingItem.value = null
   }
 }
 
-const increaseQuantity = (item) => {
-  updateOrderItemQuantity(item.id, item.quantity + 1)
-}
-
-const decreaseQuantity = (item) => {
-  if (item.quantity > 1) {
-    updateOrderItemQuantity(item.id, item.quantity - 1)
-  }
-}
-
-const confirmDeleteItem = (item) => {
+const confirmDeleteOrderItem = (item) => {
   itemToDelete.value = item
   showDeleteItemModal.value = true
 }
@@ -611,7 +855,6 @@ const deleteOrderItem = async () => {
 
   deletingItem.value = true
   try {
-    // Call API to delete order item
     await orderItemsAPI.delete(itemToDelete.value.id)
 
     // Remove item from local state
@@ -619,13 +862,19 @@ const deleteOrderItem = async () => {
       (item) => item.id !== itemToDelete.value.id,
     )
 
+    // Check if order has no items left, then delete the order
+    if (selectedOrder.value.items.length === 0) {
+      await deleteEmptyOrder()
+      return
+    }
+
     // Recalculate order total
     selectedOrder.value.total_amount = selectedOrder.value.items.reduce(
-      (sum, item) => sum + item.quantity * item.price,
+      (sum, item) => sum + parseFloat(item.quantity) * parseFloat(item.price),
       0,
     )
 
-    // Also update the order in the main orders list
+    // Update the order in the main orders list
     const orderInList = orders.value.find((o) => o.id === selectedOrder.value.id)
     if (orderInList) {
       orderInList.total_amount = selectedOrder.value.total_amount
@@ -640,6 +889,7 @@ const deleteOrderItem = async () => {
   }
 }
 
+// Utility functions
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('vi-VN', {
     style: 'currency',
@@ -660,15 +910,74 @@ const getStatusText = (status) => {
   return statusMap[status] || status
 }
 
-const getImageUrl = (item) => {
-  if (item.dish_image_url && item.dish_image_url.startsWith('/uploads/')) {
-    return `http://localhost:3000${item.dish_image_url}`
+// Function to delete empty order
+const deleteEmptyOrder = async () => {
+  if (!selectedOrder.value) return
+
+  try {
+    console.log('Deleting empty order:', selectedOrder.value.id)
+    await ordersAPI.delete(selectedOrder.value.id)
+
+    // Remove order from main orders list
+    orders.value = orders.value.filter((o) => o.id !== selectedOrder.value.id)
+
+    // Close modal
+    closeDetailsModal()
+
+    // Show notification
+    alert('Đơn hàng đã được xóa tự động vì không còn món ăn nào')
+
+    // Reload orders if current page is empty
+    if (orders.value.length === 0 && currentPage.value > 1) {
+      currentPage.value--
+      await loadOrders()
+    }
+
+    console.log('Empty order deleted successfully')
+  } catch (error) {
+    console.error('Error deleting empty order:', error)
+    alert('Có lỗi xảy ra khi xóa đơn hàng rỗng')
   }
-  return '/placeholder-dish.jpg'
+}
+
+// Helper function to check if dish is in current order
+const isDishInOrder = (dish) => {
+  if (!selectedOrder.value?.items) return false
+  return selectedOrder.value.items.some((item) => item.dish_id === parseInt(dish.id))
+}
+
+// Image URL functions
+const getItemImageUrl = (item) => {
+  // First try to get dish details from the map
+  const dishData = dishesDataMap.value[item.dish_id]
+  if (dishData && dishData.image_url) {
+    if (dishData.image_url.startsWith('/uploads/')) {
+      return `http://localhost:3000${dishData.image_url}`
+    }
+    if (dishData.image_url.startsWith('http')) {
+      return dishData.image_url
+    }
+  }
+
+  // Fallback to placeholder
+  return 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop'
+}
+
+const getDishImageUrl = (dish) => {
+  if (dish.image_url && dish.image_url.startsWith('/uploads/')) {
+    return `http://localhost:3000${dish.image_url}`
+  }
+
+  if (dish.image_url && dish.image_url.startsWith('http')) {
+    return dish.image_url
+  }
+
+  return 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop'
 }
 
 const handleImageError = (event) => {
-  event.target.src = '/placeholder-dish.jpg'
+  event.target.src =
+    'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop'
 }
 
 const updateOrderStatus = async (orderId, status) => {
