@@ -577,13 +577,11 @@ const formatCurrency = (amount) => {
 
 const getImageUrl = (dish) => {
   if (dish.image_url && dish.image_url.startsWith('/uploads/')) {
-    return `http://localhost:3000${dish.image_url}`
+    return dish.image_url // Không hardcode localhost:3000
   }
-
   if (dish.image_url && dish.image_url.startsWith('http')) {
     return dish.image_url
   }
-
   return 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop'
 }
 

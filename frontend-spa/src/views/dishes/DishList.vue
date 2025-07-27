@@ -543,12 +543,12 @@ const formatCurrency = (amount) => {
 }
 
 const getImageUrl = (dish) => {
-  // If dish has uploaded image, use it
+  // Nếu có ảnh upload, dùng relative path (không hardcode domain)
   if (dish.image_url && dish.image_url.startsWith('/uploads/')) {
-    return `http://localhost:3000${dish.image_url}`
+    return dish.image_url // Chỉ return relative path
   }
 
-  // If external URL fails, use placeholder
+  // Nếu là external URL
   if (dish.image_url && dish.image_url.startsWith('http')) {
     return dish.image_url
   }

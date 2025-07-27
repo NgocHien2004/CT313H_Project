@@ -10,10 +10,10 @@ app.use(cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use("/uploads", express.static("public/uploads"));
+//app.use("/uploads", express.static("public/uploads"));
 
 // Serve ảnh tĩnh từ thư mục uploads
-app.use("/uploads", express.static(path.join(__dirname, "../public/uploads")));
+//app.use("/uploads", express.static(path.join(__dirname, "../public/uploads")));
 
 // Swagger docs
 const swaggerRoutes = require("./routes/swagger");

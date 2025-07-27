@@ -262,28 +262,26 @@ const debouncedDishSearch = () => {
 
 // Image handling methods
 const getImageUrl = (dish) => {
-  // If dish has uploaded image, use it
   if (dish.image_url && dish.image_url.startsWith('/uploads/')) {
-    return `http://localhost:3000${dish.image_url}`
+    return dish.image_url // Chỉ return relative path
   }
 
-  // If external URL fails, use placeholder
-  if (dish.image_url && dish.image_url.includes('loremflickr.com')) {
-    return '/placeholder-dish.jpg'
+  if (dish.image_url && dish.image_url.startsWith('http')) {
+    return dish.image_url
   }
 
-  // Default placeholder
-  return '/placeholder-dish.jpg'
+  return 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop'
 }
+
+// Đơn giản hóa handleImageError
 
 const handleImageLoad = (dishId) => {
   imageLoadingStates.value[dishId] = false
 }
 
-const handleImageError = (event, dishId) => {
-  console.log('Image error for dish:', dishId)
-  event.target.src = '/placeholder-dish.jpg'
-  imageLoadingStates.value[dishId] = false
+const handleImageError = (event) => {
+  event.target.src =
+    'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop'
 }
 
 // Methods
