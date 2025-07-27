@@ -14,7 +14,7 @@
 
       <!-- Filters -->
       <div class="bg-white p-4 rounded-lg shadow-sm border">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
             <select
@@ -80,74 +80,68 @@
                 <th
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
-                  Số bàn
+                  SỐ BÀN
                 </th>
                 <th
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
-                  Tổng tiền
+                  TỔNG TIỀN
                 </th>
                 <th
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
-                  Trạng thái
+                  TRẠNG THÁI
                 </th>
                 <th
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
-                  Thời gian
-                </th>
-                <th
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Hành động
+                  HÀNH ĐỘNG
                 </th>
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
               <tr v-for="order in orders" :key="order.id" class="hover:bg-gray-50">
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  #{{ order.id }}
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm font-medium text-gray-900">#{{ order.id }}</div>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  Bàn {{ order.table_number }}
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm text-gray-900">Bàn {{ order.table_number }}</div>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                  {{ formatCurrency(order.total_amount) }}
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="text-sm text-gray-900">{{ formatCurrency(order.total_amount) }}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <select
                     :value="order.status"
                     @change="updateOrderStatus(order.id, $event.target.value)"
-                    class="text-xs px-2 py-1 rounded-full border"
                     :class="{
                       'bg-yellow-100 text-yellow-800 border-yellow-300': order.status === 'pending',
                       'bg-green-100 text-green-800 border-green-300': order.status === 'completed',
                       'bg-red-100 text-red-800 border-red-300': order.status === 'canceled',
                     }"
+                    class="text-xs font-semibold rounded-full px-2 py-1 border focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="pending">Đang chờ</option>
                     <option value="completed">Hoàn thành</option>
                     <option value="canceled">Đã hủy</option>
                   </select>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {{ formatDate(order.created_at) }}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
-                  <button
-                    @click="viewOrderDetails(order.id)"
-                    class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-blue-700 bg-blue-100 hover:bg-blue-200"
-                  >
-                    Chi tiết
-                  </button>
-                  <button
-                    v-if="authStore.isAdmin"
-                    @click="confirmDelete(order)"
-                    class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200"
-                  >
-                    Xóa
-                  </button>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <div class="flex space-x-2">
+                    <button
+                      @click="viewOrderDetails(order.id)"
+                      class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-blue-700 bg-blue-100 hover:bg-blue-200"
+                    >
+                      Chi tiết
+                    </button>
+                    <button
+                      v-if="authStore.isAdmin"
+                      @click="confirmDelete(order)"
+                      class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200"
+                    >
+                      Xóa
+                    </button>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -184,7 +178,7 @@
                 :class="[
                   'px-3 py-2 text-sm font-medium rounded-md',
                   page === currentPage
-                    ? 'bg-blue-600 text-white border border-blue-600'
+                    ? 'bg-blue-500 text-white'
                     : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50',
                 ]"
               >
@@ -204,7 +198,7 @@
       </div>
     </div>
 
-    <!-- Delete Confirmation Modal -->
+    <!-- Delete Modal -->
     <div
       v-if="showDeleteModal"
       class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
@@ -225,7 +219,7 @@
               ></path>
             </svg>
           </div>
-          <h3 class="text-lg font-medium text-gray-900 mt-2">Xác nhận xóa</h3>
+          <h3 class="text-lg font-medium text-gray-900 mt-2">Xác nhận xóa đơn hàng</h3>
           <div class="mt-2 px-7 py-3">
             <p class="text-sm text-gray-500">
               Bạn có chắc chắn muốn xóa đơn hàng #{{ orderToDelete?.id }}? Hành động này không thể
@@ -281,69 +275,72 @@
           <div v-else-if="selectedOrder" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- Left Column: Order Info and Current Items -->
             <div class="space-y-6">
-              <!-- Order Info -->
               <div class="bg-gray-50 p-4 rounded-lg">
                 <h4 class="text-md font-medium text-gray-900 mb-3">Thông tin đơn hàng</h4>
-                <div class="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span class="font-medium text-gray-700">Số bàn:</span>
-                    <p class="text-gray-900">Bàn {{ selectedOrder.table_number }}</p>
+                <div class="space-y-2 text-sm">
+                  <div class="flex justify-between">
+                    <span class="text-gray-600">Số bàn:</span>
+                    <span class="font-medium">Bàn {{ selectedOrder.table_number }}</span>
                   </div>
-                  <div>
-                    <span class="font-medium text-gray-700">Trạng thái:</span>
-                    <p class="text-gray-900">{{ getStatusText(selectedOrder.status) }}</p>
+                  <div class="flex justify-between">
+                    <span class="text-gray-600">Trạng thái:</span>
+                    <span
+                      :class="{
+                        'text-yellow-600': selectedOrder.status === 'pending',
+                        'text-green-600': selectedOrder.status === 'completed',
+                        'text-red-600': selectedOrder.status === 'canceled',
+                      }"
+                      class="font-medium"
+                    >
+                      {{ getStatusText(selectedOrder.status) }}
+                    </span>
                   </div>
-                  <div>
-                    <span class="font-medium text-gray-700">Tổng tiền:</span>
-                    <p class="text-gray-900 font-semibold">
-                      {{ formatCurrency(selectedOrder.total_amount) }}
-                    </p>
+                  <div class="flex justify-between">
+                    <span class="text-gray-600">Tổng tiền:</span>
+                    <span class="font-medium text-lg text-blue-600">{{
+                      formatCurrency(selectedOrder.total_amount)
+                    }}</span>
                   </div>
-                  <div>
-                    <span class="font-medium text-gray-700">Thời gian:</span>
-                    <p class="text-gray-900">{{ formatDate(selectedOrder.created_at) }}</p>
+                  <div class="flex justify-between">
+                    <span class="text-gray-600">Thời gian:</span>
+                    <span class="font-medium">{{ formatDate(selectedOrder.order_time) }}</span>
                   </div>
                 </div>
               </div>
 
-              <!-- Current Order Items -->
-              <div>
-                <h4 class="text-md font-medium text-gray-900 mb-3">
-                  Món ăn trong đơn ({{ selectedOrder.items?.length || 0 }} món)
-                </h4>
-
-                <div v-if="selectedOrder.items && selectedOrder.items.length > 0" class="space-y-3">
-                  <div
-                    v-for="item in selectedOrder.items"
-                    :key="item.id"
-                    class="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
-                  >
-                    <div class="flex items-center space-x-4">
-                      <!-- Dish Image -->
-                      <div class="flex-shrink-0">
-                        <img
-                          :src="getItemImageUrl(item)"
-                          :alt="item.dish_name"
-                          @error="handleImageError"
-                          class="h-16 w-16 object-cover rounded-lg"
-                        />
+              <!-- Order Items -->
+              <div class="bg-white border border-gray-200 rounded-lg">
+                <div class="px-4 py-3 border-b border-gray-200">
+                  <h4 class="text-md font-medium text-gray-900">
+                    Món ăn trong đơn ({{ selectedOrder.items?.length || 0 }} món)
+                  </h4>
+                </div>
+                <div
+                  v-if="selectedOrder.items && selectedOrder.items.length > 0"
+                  class="divide-y divide-gray-200"
+                >
+                  <div v-for="item in selectedOrder.items" :key="item.id" class="p-4">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center space-x-3">
+                        <div class="flex-shrink-0">
+                          <img
+                            :src="getItemImageUrl(item)"
+                            :alt="item.dish_name"
+                            @error="handleImageError"
+                            class="h-12 w-12 object-cover rounded"
+                          />
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <p class="text-sm font-medium text-gray-900">{{ item.dish_name }}</p>
+                          <p class="text-xs text-gray-500">
+                            {{ formatCurrency(item.price) }} / món
+                          </p>
+                        </div>
                       </div>
-
-                      <!-- Dish Info -->
-                      <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-gray-900">{{ item.dish_name }}</p>
-                        <p class="text-sm text-gray-500 mt-1">
-                          {{ formatCurrency(item.price) }} x {{ item.quantity }}
-                        </p>
-                      </div>
-                    </div>
-
-                    <!-- Quantity Controls and Price -->
-                    <div class="flex items-center space-x-4">
                       <div class="flex items-center space-x-2">
                         <button
-                          @click="updateOrderItemQuantity(item.id, item.quantity - 1)"
-                          :disabled="updatingItem === item.id"
+                          @click="updateOrderItemQuantity(item.id, Math.max(1, item.quantity - 1))"
+                          :disabled="updatingItem === item.id || item.quantity <= 1"
                           class="w-6 h-6 flex items-center justify-center bg-gray-100 text-gray-600 rounded hover:bg-gray-200 disabled:opacity-50"
                         >
                           -
@@ -456,6 +453,16 @@
                   <div v-if="availableDishes.length === 0" class="text-center py-4 text-gray-500">
                     Không tìm thấy món ăn nào.
                   </div>
+                </div>
+
+                <!-- Nút Xong - PHẦN DUY NHẤT THÊM MỚI -->
+                <div class="mt-6 pt-4 border-t border-blue-200">
+                  <button
+                    @click="closeDetailsModal"
+                    class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium"
+                  >
+                    ✓ Xong
+                  </button>
                 </div>
               </div>
             </div>
@@ -666,6 +673,16 @@ const loadAllDishes = async () => {
   }
 }
 
+// Load categories for filtering
+const loadCategories = async () => {
+  try {
+    const response = await categoriesAPI.getAll()
+    categories.value = response.data || []
+  } catch (error) {
+    console.error('Error loading categories:', error)
+  }
+}
+
 // Load dishes for adding to order
 const loadDishesInModal = async () => {
   loadingDishes.value = true
@@ -688,17 +705,7 @@ const loadDishesInModal = async () => {
   }
 }
 
-const loadCategories = async () => {
-  try {
-    const response = await categoriesAPI.getAll()
-    categories.value = response.data || []
-  } catch (error) {
-    console.error('Error loading categories:', error)
-    categories.value = []
-  }
-}
-
-// Add dish to current order
+// Add dish to order
 const addDishToOrder = async (dish) => {
   if (!selectedOrder.value || !dish.is_available) return
 
@@ -774,7 +781,7 @@ const addDishToOrder = async (dish) => {
   }
 }
 
-// Order item management functions
+// Update order item quantity
 const updateOrderItemQuantity = async (orderItemId, newQuantity) => {
   try {
     updatingItem.value = orderItemId
@@ -840,6 +847,40 @@ const updateOrderItemQuantity = async (orderItemId, newQuantity) => {
   }
 }
 
+// Delete confirmation methods
+const confirmDelete = (order) => {
+  orderToDelete.value = order
+  showDeleteModal.value = true
+}
+
+const closeDeleteModal = () => {
+  showDeleteModal.value = false
+  orderToDelete.value = null
+}
+
+const deleteOrder = async () => {
+  if (!orderToDelete.value) return
+
+  deleting.value = true
+  try {
+    await ordersAPI.delete(orderToDelete.value.id)
+    orders.value = orders.value.filter((o) => o.id !== orderToDelete.value.id)
+    closeDeleteModal()
+
+    // Reload if current page is empty
+    if (orders.value.length === 0 && currentPage.value > 1) {
+      currentPage.value--
+      await loadOrders()
+    }
+  } catch (error) {
+    console.error('Error deleting order:', error)
+    alert('Có lỗi xảy ra khi xóa đơn hàng')
+  } finally {
+    deleting.value = false
+  }
+}
+
+// Order item delete methods
 const confirmDeleteOrderItem = (item) => {
   itemToDelete.value = item
   showDeleteItemModal.value = true
@@ -855,6 +896,7 @@ const deleteOrderItem = async () => {
 
   deletingItem.value = true
   try {
+    console.log('Deleting order item:', itemToDelete.value.id)
     await orderItemsAPI.delete(itemToDelete.value.id)
 
     // Remove item from local state
@@ -862,19 +904,19 @@ const deleteOrderItem = async () => {
       (item) => item.id !== itemToDelete.value.id,
     )
 
-    // Check if order has no items left, then delete the order
+    // Recalculate total
+    selectedOrder.value.total_amount = selectedOrder.value.items.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0,
+    )
+
+    // If no items left, delete the order
     if (selectedOrder.value.items.length === 0) {
       await deleteEmptyOrder()
       return
     }
 
-    // Recalculate order total
-    selectedOrder.value.total_amount = selectedOrder.value.items.reduce(
-      (sum, item) => sum + parseFloat(item.quantity) * parseFloat(item.price),
-      0,
-    )
-
-    // Update the order in the main orders list
+    // Update order in main list
     const orderInList = orders.value.find((o) => o.id === selectedOrder.value.id)
     if (orderInList) {
       orderInList.total_amount = selectedOrder.value.total_amount
@@ -887,27 +929,6 @@ const deleteOrderItem = async () => {
   } finally {
     deletingItem.value = false
   }
-}
-
-// Utility functions
-const formatCurrency = (amount) => {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-  }).format(amount)
-}
-
-const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleString('vi-VN')
-}
-
-const getStatusText = (status) => {
-  const statusMap = {
-    pending: 'Đang chờ',
-    completed: 'Hoàn thành',
-    canceled: 'Đã hủy',
-  }
-  return statusMap[status] || status
 }
 
 // Function to delete empty order
@@ -940,10 +961,68 @@ const deleteEmptyOrder = async () => {
   }
 }
 
-// Helper function to check if dish is in current order
-const isDishInOrder = (dish) => {
-  if (!selectedOrder.value?.items) return false
-  return selectedOrder.value.items.some((item) => item.dish_id === parseInt(dish.id))
+// Update order status
+const updateOrderStatus = async (orderId, newStatus) => {
+  try {
+    await ordersAPI.update(orderId, { status: newStatus })
+
+    // Update local state
+    const order = orders.value.find((o) => o.id === orderId)
+    if (order) {
+      order.status = newStatus
+    }
+
+    // Also update selected order if it's the same
+    if (selectedOrder.value && selectedOrder.value.id === orderId) {
+      selectedOrder.value.status = newStatus
+    }
+
+    console.log('Order status updated successfully')
+  } catch (error) {
+    console.error('Error updating order status:', error)
+    alert('Có lỗi xảy ra khi cập nhật trạng thái đơn hàng')
+  }
+}
+
+// Pagination methods
+const goToPage = (page) => {
+  currentPage.value = page
+  loadOrders()
+}
+
+const previousPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--
+    loadOrders()
+  }
+}
+
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++
+    loadOrders()
+  }
+}
+
+// Utility functions
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+  }).format(amount)
+}
+
+const formatDate = (dateString) => {
+  return new Date(dateString).toLocaleString('vi-VN')
+}
+
+const getStatusText = (status) => {
+  const statusMap = {
+    pending: 'Đang chờ',
+    completed: 'Hoàn thành',
+    canceled: 'Đã hủy',
+  }
+  return statusMap[status] || status
 }
 
 // Image URL functions
@@ -980,71 +1059,7 @@ const handleImageError = (event) => {
     'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop'
 }
 
-const updateOrderStatus = async (orderId, status) => {
-  try {
-    await ordersAPI.update(orderId, { status })
-    const order = orders.value.find((o) => o.id === orderId)
-    if (order) {
-      order.status = status
-    }
-  } catch (error) {
-    console.error('Error updating order status:', error)
-    alert('Có lỗi xảy ra khi cập nhật trạng thái đơn hàng')
-  }
-}
-
-const confirmDelete = (order) => {
-  orderToDelete.value = order
-  showDeleteModal.value = true
-}
-
-const closeDeleteModal = () => {
-  showDeleteModal.value = false
-  orderToDelete.value = null
-}
-
-const deleteOrder = async () => {
-  if (!orderToDelete.value) return
-
-  deleting.value = true
-  try {
-    await ordersAPI.delete(orderToDelete.value.id)
-    orders.value = orders.value.filter((o) => o.id !== orderToDelete.value.id)
-    closeDeleteModal()
-
-    // Reload if current page is empty
-    if (orders.value.length === 0 && currentPage.value > 1) {
-      currentPage.value--
-      loadOrders()
-    }
-  } catch (error) {
-    console.error('Error deleting order:', error)
-    alert('Có lỗi xảy ra khi xóa đơn hàng')
-  } finally {
-    deleting.value = false
-  }
-}
-
-// Pagination methods
-const goToPage = (page) => {
-  currentPage.value = page
-  loadOrders()
-}
-
-const previousPage = () => {
-  if (currentPage.value > 1) {
-    currentPage.value--
-    loadOrders()
-  }
-}
-
-const nextPage = () => {
-  if (currentPage.value < totalPages.value) {
-    currentPage.value++
-    loadOrders()
-  }
-}
-
+// Initialize
 onMounted(() => {
   loadOrders()
 })

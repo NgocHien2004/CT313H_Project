@@ -317,7 +317,7 @@ import axios from 'axios'
 
 // Create axios instance for direct API calls
 const axiosClient = axios.create({
-  baseURL: 'http://localhost:3000/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

@@ -248,7 +248,8 @@ const loadDish = async () => {
       })
 
       if (dish.image_url) {
-        imagePreview.value = `http://localhost:3000${dish.image_url}`
+        // Sử dụng relative path, nginx sẽ tự động resolve
+        imagePreview.value = dish.image_url
       }
     } else {
       error.value = 'Không tìm thấy món ăn'
