@@ -1,4 +1,4 @@
-const { faker } = require("@faker-js/faker");
+const { faker } = require("@faker-js/faker/locale/vi");
 
 function createOrderItem(orderId, dish) {
   const quantity = faker.number.int({ min: 1, max: 3 });

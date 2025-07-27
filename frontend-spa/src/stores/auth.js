@@ -23,15 +23,7 @@ export const useAuthStore = defineStore('auth', {
       try {
         const response = await authAPI.login(credentials)
         this.token = response.data.token
-
-        // Decode token để lấy user info (simple decode)
-        const tokenParts = this.token.split('.')
-        const payload = JSON.parse(atob(tokenParts[1]))
-        this.user = {
-          id: payload.id,
-          role: payload.role,
-          email: credentials.email,
-        }
+        this.user = response.data.user // Sử dụng user info từ backend
 
         localStorage.setItem('token', this.token)
         localStorage.setItem('user', JSON.stringify(this.user))

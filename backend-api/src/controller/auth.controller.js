@@ -11,8 +11,12 @@ exports.register = async (req, res, next) => {
 
 exports.login = async (req, res, next) => {
   try {
-    const token = await authService.login(req.body);
-    res.json({ message: "Login successful", token });
+    const result = await authService.login(req.body);
+    res.json({
+      message: "Login successful",
+      token: result.token,
+      user: result.user,
+    });
   } catch (err) {
     next(err);
   }

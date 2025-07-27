@@ -18,17 +18,26 @@ exports.getAllOrders = async (req, res, next) => {
       limit: 10,
       offset: 0,
     };
+
+    // Lấy filters từ query parameters
+    const filters = {
+      status: req.query.status,
+      table_number: req.query.table_number,
+      date: req.query.date,
+    };
+
     let orders;
     if (req.user.role === "admin") {
-      orders = await orderService.getAllOrders({ limit, offset });
+      orders = await orderService.getAllOrders({ limit, offset, filters });
     } else {
       orders = await orderService.getOrdersByUser({
         userId: req.user.id,
         limit,
         offset,
+        filters,
       });
     }
-    res.json({ data: orders, page, limit });
+    res.json({ data: orders.data, total: orders.total, page, limit });
   } catch (err) {
     next(err);
   }
@@ -62,10 +71,7 @@ exports.updateOrder = async (req, res) => {
           const totalUsed = ing.quantity_required * item.quantity;
 
           // Trừ trong inventory
-          await trx("inventory")
-            .where({ id: ing.inventory_id })
-            .decrement("quantity", totalUsed)
-            .update({ updated_at: knex.fn.now() });
+          await trx("inventory").where({ id: ing.inventory_id }).decrement("quantity", totalUsed).update({ updated_at: knex.fn.now() });
 
           // Ghi log
           await trx("inventory_logs").insert({

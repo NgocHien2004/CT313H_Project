@@ -16,11 +16,20 @@ exports.getAllReservations = async (req, res, next) => {
       limit: 10,
       offset: 0,
     };
+
+    // Lấy filters từ query parameters
+    const filters = {
+      status: req.query.status,
+      customer_name: req.query.customer_name,
+      date: req.query.date,
+    };
+
     const reservations = await reservationService.getAllReservations({
       limit,
       offset,
+      filters,
     });
-    res.json({ data: reservations, page, limit });
+    res.json({ data: reservations.data, total: reservations.total, page, limit });
   } catch (err) {
     next(err);
   }
@@ -28,10 +37,7 @@ exports.getAllReservations = async (req, res, next) => {
 
 exports.updateReservation = async (req, res, next) => {
   try {
-    const reservation = await reservationService.updateReservation(
-      req.params.id,
-      req.body
-    );
+    const reservation = await reservationService.updateReservation(req.params.id, req.body);
     res.json({ message: "Reservation updated", data: reservation });
   } catch (err) {
     next(err);

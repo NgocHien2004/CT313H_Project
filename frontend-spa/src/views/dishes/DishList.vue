@@ -63,10 +63,10 @@
         <div
           v-for="dish in dishesWithAvailabilityStatus"
           :key="dish.id"
-          class="bg-white overflow-hidden shadow-sm rounded-lg hover:shadow-md transition-shadow"
+          class="bg-white overflow-hidden shadow-sm rounded-lg hover:shadow-md transition-shadow flex flex-col h-full"
         >
           <!-- Image -->
-          <div class="aspect-w-16 aspect-h-9">
+          <div class="aspect-w-16 aspect-h-9 flex-shrink-0">
             <img
               :src="getImageUrl(dish)"
               :alt="dish.name"
@@ -76,8 +76,8 @@
           </div>
 
           <!-- Content -->
-          <div class="p-4">
-            <div class="flex items-start justify-between">
+          <div class="p-4 flex-1 flex flex-col">
+            <div class="flex items-start justify-between flex-1">
               <div class="flex-1">
                 <h3 class="text-lg font-medium text-gray-900 mb-1">{{ dish.name }}</h3>
                 <p class="text-sm text-gray-500 mb-2 line-clamp-2">
@@ -115,45 +115,45 @@
                 </span>
               </div>
             </div>
-          </div>
 
-          <!-- Actions -->
-          <div class="mt-4 space-y-2 p-4 pt-0">
-            <!-- Recipe Button (All users) -->
-            <button
-              @click="goToRecipe(dish.id)"
-              class="w-full bg-emerald-50 text-emerald-700 text-center py-2 px-3 rounded-md text-sm font-medium hover:bg-emerald-100 transition-colors"
-            >
-              <svg
-                class="w-4 h-4 inline mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+            <!-- Actions - Luôn ở dưới cùng -->
+            <div class="mt-auto pt-4 space-y-2">
+              <!-- Recipe Button (All users) -->
+              <button
+                @click="goToRecipe(dish.id)"
+                class="w-full bg-emerald-50 text-emerald-700 text-center py-2 px-3 rounded-md text-sm font-medium hover:bg-emerald-100 transition-colors"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                ></path>
-              </svg>
-              Xem công thức
-            </button>
+                <svg
+                  class="w-4 h-4 inline mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  ></path>
+                </svg>
+                Xem công thức
+              </button>
 
-            <!-- Admin Actions -->
-            <div v-if="authStore.isAdmin" class="flex space-x-2">
-              <button
-                @click="goToEdit(dish.id)"
-                class="flex-1 bg-blue-50 text-blue-700 text-center py-2 px-3 rounded-md text-sm font-medium hover:bg-blue-100 transition-colors"
-              >
-                Sửa
-              </button>
-              <button
-                @click="confirmDelete(dish)"
-                class="flex-1 bg-red-50 text-red-700 py-2 px-3 rounded-md text-sm font-medium hover:bg-red-100 transition-colors"
-              >
-                Xóa
-              </button>
+              <!-- Admin Actions -->
+              <div v-if="authStore.isAdmin" class="flex space-x-2">
+                <button
+                  @click="goToEdit(dish.id)"
+                  class="flex-1 bg-blue-50 text-blue-700 text-center py-2 px-3 rounded-md text-sm font-medium hover:bg-blue-100 transition-colors"
+                >
+                  Sửa
+                </button>
+                <button
+                  @click="confirmDelete(dish)"
+                  class="flex-1 bg-red-50 text-red-700 py-2 px-3 rounded-md text-sm font-medium hover:bg-red-100 transition-colors"
+                >
+                  Xóa
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -171,11 +171,11 @@
             stroke-linecap="round"
             stroke-linejoin="round"
             stroke-width="2"
-            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012-2z"
           />
         </svg>
         <h3 class="mt-2 text-sm font-medium text-gray-900">Không có món ăn nào</h3>
-        <p class="mt-1 text-sm text-gray-500">Bắt đầu bằng cách tạo món ăn mới.</p>
+        <p class="mt-1 text-sm text-gray-500">Hãy bắt đầu bằng cách tạo món ăn đầu tiên.</p>
         <div class="mt-6">
           <button v-if="authStore.isAdmin" @click="goToCreate" class="btn-primary">
             Thêm món ăn mới
@@ -185,49 +185,52 @@
 
       <!-- Pagination -->
       <div
-        v-if="totalPages > 1"
-        class="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6"
+        v-if="!loading && dishes.length > 0"
+        class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 rounded-lg shadow-sm"
       >
-        <div class="flex flex-1 justify-between sm:hidden">
+        <div class="flex-1 flex justify-between sm:hidden">
           <button
             @click="changePage(currentPage - 1)"
             :disabled="currentPage === 1"
-            class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Trước
           </button>
           <button
             @click="changePage(currentPage + 1)"
             :disabled="currentPage === totalPages"
-            class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Sau
           </button>
         </div>
-        <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
           <div>
             <p class="text-sm text-gray-700">
               Hiển thị
               <span class="font-medium">{{ (currentPage - 1) * limit + 1 }}</span>
               đến
               <span class="font-medium">{{ Math.min(currentPage * limit, total) }}</span>
-              trong tổng số
+              trong
               <span class="font-medium">{{ total }}</span>
               kết quả
             </p>
           </div>
           <div>
-            <nav class="isolate inline-flex -space-x-px rounded-md shadow-sm">
+            <nav
+              class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+              aria-label="Pagination"
+            >
               <button
                 @click="changePage(currentPage - 1)"
                 :disabled="currentPage === 1"
-                class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <span class="sr-only">Trang trước</span>
-                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <span class="sr-only">Previous</span>
+                <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
                   <path
                     fill-rule="evenodd"
-                    d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
+                    d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
                     clip-rule="evenodd"
                   />
                 </svg>
@@ -238,10 +241,10 @@
                 :key="page"
                 @click="changePage(page)"
                 :class="[
+                  'relative inline-flex items-center px-4 py-2 border text-sm font-medium',
                   page === currentPage
-                    ? 'bg-blue-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600'
-                    : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0',
-                  'relative inline-flex items-center px-4 py-2 text-sm font-semibold focus:z-20',
+                    ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
+                    : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50',
                 ]"
               >
                 {{ page }}
@@ -250,13 +253,13 @@
               <button
                 @click="changePage(currentPage + 1)"
                 :disabled="currentPage === totalPages"
-                class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <span class="sr-only">Trang sau</span>
-                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <span class="sr-only">Next</span>
+                <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
                   <path
                     fill-rule="evenodd"
-                    d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
+                    d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
                     clip-rule="evenodd"
                   />
                 </svg>

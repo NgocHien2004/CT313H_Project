@@ -30,11 +30,16 @@ exports.login = async (data) => {
   const valid = await bcrypt.compare(data.password, user.password);
   if (!valid) throw new Error("Invalid credentials");
 
-  const token = jwt.sign(
-    { id: user.id, role: user.role },
-    process.env.JWT_SECRET,
-    { expiresIn: "1d" }
-  );
+  const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "1d" });
 
-  return token;
+  // Trả về cả token và user info (không bao gồm password)
+  return {
+    token,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    },
+  };
 };

@@ -332,7 +332,7 @@
               <input
                 v-model="ingredientForm.quantity_required"
                 type="number"
-                step="0.1"
+                step="1"
                 required
                 class="input-field"
                 placeholder="Nhập số lượng cần thiết"

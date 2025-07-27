@@ -301,10 +301,6 @@
                       formatCurrency(selectedOrder.total_amount)
                     }}</span>
                   </div>
-                  <div class="flex justify-between">
-                    <span class="text-gray-600">Thời gian:</span>
-                    <span class="font-medium">{{ formatDate(selectedOrder.order_time) }}</span>
-                  </div>
                 </div>
               </div>
 
@@ -1010,10 +1006,6 @@ const formatCurrency = (amount) => {
     style: 'currency',
     currency: 'VND',
   }).format(amount)
-}
-
-const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleString('vi-VN')
 }
 
 const getStatusText = (status) => {

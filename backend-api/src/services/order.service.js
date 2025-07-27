@@ -29,23 +29,80 @@ exports.createOrder = async (data) => {
   return { ...order, total_amount: total };
 };
 
-exports.getAllOrders = async ({ limit, offset }) => {
-  return await knex("orders").select("*").limit(limit).offset(offset);
+exports.getAllOrders = async ({ limit, offset, filters = {} }) => {
+  // Build query với filters
+  let query = knex("orders").select("*");
+  let countQuery = knex("orders");
+
+  // Apply filters
+  if (filters.status) {
+    query = query.where("status", filters.status);
+    countQuery = countQuery.where("status", filters.status);
+  }
+
+  if (filters.table_number) {
+    query = query.where("table_number", filters.table_number);
+    countQuery = countQuery.where("table_number", filters.table_number);
+  }
+
+  if (filters.date) {
+    // Filter by date (created_at)
+    const startDate = new Date(filters.date);
+    const endDate = new Date(filters.date);
+    endDate.setDate(endDate.getDate() + 1); // Next day
+
+    query = query.whereBetween("created_at", [startDate, endDate]);
+    countQuery = countQuery.whereBetween("created_at", [startDate, endDate]);
+  }
+
+  // Get total count
+  const [totalRow] = await countQuery.count("* as count");
+  const total = Number(totalRow.count);
+
+  // Get data with pagination
+  const data = await query.orderBy("created_at", "desc").limit(limit).offset(offset);
+
+  return { data, total };
 };
 
-exports.getOrdersByUser = async ({ userId, limit, offset }) => {
-  return await knex("orders")
-    .where({ user_id: userId })
-    .select("*")
-    .limit(limit)
-    .offset(offset);
+exports.getOrdersByUser = async ({ userId, limit, offset, filters = {} }) => {
+  // Build query với filters cho user cụ thể
+  let query = knex("orders").where({ user_id: userId }).select("*");
+  let countQuery = knex("orders").where({ user_id: userId });
+
+  // Apply filters
+  if (filters.status) {
+    query = query.where("status", filters.status);
+    countQuery = countQuery.where("status", filters.status);
+  }
+
+  if (filters.table_number) {
+    query = query.where("table_number", filters.table_number);
+    countQuery = countQuery.where("table_number", filters.table_number);
+  }
+
+  if (filters.date) {
+    // Filter by date (created_at)
+    const startDate = new Date(filters.date);
+    const endDate = new Date(filters.date);
+    endDate.setDate(endDate.getDate() + 1); // Next day
+
+    query = query.whereBetween("created_at", [startDate, endDate]);
+    countQuery = countQuery.whereBetween("created_at", [startDate, endDate]);
+  }
+
+  // Get total count
+  const [totalRow] = await countQuery.count("* as count");
+  const total = Number(totalRow.count);
+
+  // Get data with pagination
+  const data = await query.orderBy("created_at", "desc").limit(limit).offset(offset);
+
+  return { data, total };
 };
 
 exports.updateOrder = async (id, data) => {
-  const [order] = await knex("orders")
-    .where("id", id)
-    .update(data)
-    .returning("*");
+  const [order] = await knex("orders").where("id", id).update(data).returning("*");
   return order;
 };
 
