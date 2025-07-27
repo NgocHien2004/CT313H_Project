@@ -85,10 +85,10 @@
                 <div>
                   <span class="font-medium text-gray-700">Trạng thái:</span>
                   <span
-                    :class="dish.is_available ? 'text-green-600' : 'text-red-600'"
+                    :class="calculatedAvailability ? 'text-green-600' : 'text-red-600'"
                     class="ml-2 font-medium"
                   >
-                    {{ dish.is_available ? 'Có sẵn' : 'Hết hàng' }}
+                    {{ calculatedAvailability ? 'Có sẵn' : 'Hết hàng' }}
                   </span>
                 </div>
                 <div>
@@ -462,6 +462,21 @@ const ingredientForm = reactive({
 })
 
 // Computed properties
+const calculatedAvailability = computed(() => {
+  // Nếu chưa có nguyên liệu hoặc chưa có công thức, coi như có sẵn
+  if (!dishIngredients.value || dishIngredients.value.length === 0) {
+    return true
+  }
+
+  // Kiểm tra tất cả nguyên liệu có đủ hay không
+  return dishIngredients.value.every((ingredient) => {
+    const inventoryItem = inventory.value.find((inv) => inv.id === ingredient.inventory_id)
+    const current = inventoryItem?.quantity || 0
+    const required = ingredient.quantity_required || 0
+    return current >= required
+  })
+})
+
 const sufficientCount = computed(() => {
   if (!dishIngredients.value) return 0
   return dishIngredients.value.filter((ingredient) => {
@@ -503,12 +518,10 @@ const loadDishWithRecipe = async () => {
     console.log('Dish recipe response:', response.data)
 
     dish.value = response.data
-
-    // Load dish ingredients using correct API
-    await loadDishIngredients()
+    dishIngredients.value = response.data.ingredients || []
   } catch (err) {
     console.error('Error loading dish recipe:', err)
-    error.value = err.response?.data?.message || 'Không thể tải thông tin công thức món ăn'
+    error.value = 'Không thể tải thông tin món ăn và công thức'
   } finally {
     loading.value = false
   }
@@ -517,21 +530,17 @@ const loadDishWithRecipe = async () => {
 const loadDishIngredients = async () => {
   try {
     const dishId = route.params.id
-    // Use the specific API endpoint for dish ingredients
-    const response = await axiosClient.get(`/dish-ingredients/dish/${dishId}`)
-    dishIngredients.value = response.data || []
-    console.log('Loaded dish ingredients:', dishIngredients.value)
+    const response = await axiosClient.get(`/dishes/${dishId}/detail`)
+    dishIngredients.value = response.data.ingredients || []
   } catch (err) {
     console.error('Error loading dish ingredients:', err)
-    dishIngredients.value = []
   }
 }
 
 const loadInventory = async () => {
   try {
-    const response = await inventoryAPI.getAll({ limit: 100 })
+    const response = await inventoryAPI.getAll({ limit: 1000 })
     inventory.value = response.data.data || []
-    console.log('Inventory loaded:', inventory.value)
   } catch (err) {
     console.error('Error loading inventory:', err)
   }
@@ -541,14 +550,12 @@ const loadCategories = async () => {
   try {
     const response = await categoriesAPI.getAll()
     categories.value = response.data || []
-    console.log('Categories loaded:', categories.value)
   } catch (err) {
     console.error('Error loading categories:', err)
   }
 }
 
 const getCategoryName = (categoryId) => {
-  if (!categoryId) return 'Không có'
   const category = categories.value.find((cat) => cat.id === categoryId)
   return category ? category.name : 'Không có'
 }
