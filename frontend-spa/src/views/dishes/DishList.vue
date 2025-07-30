@@ -383,7 +383,7 @@ const visiblePages = computed(() => {
 
 // Calculate availability status for each dish based on ingredients
 const dishesWithAvailabilityStatus = computed(() => {
-  return dishes.value.map((dish) => {
+  let filteredDishes = dishes.value.map((dish) => {
     const ingredients = dishIngredients.value[dish.id] || []
 
     // If no ingredients defined, use original availability
@@ -427,6 +427,16 @@ const dishesWithAvailabilityStatus = computed(() => {
       },
     }
   })
+
+  // Apply client-side filter for availability status
+  if (filters.value.is_available !== '') {
+    const filterAvailable = filters.value.is_available === 'true'
+    filteredDishes = filteredDishes.filter(
+      (dish) => dish.calculatedAvailability === filterAvailable,
+    )
+  }
+
+  return filteredDishes
 })
 
 // Debounced search
@@ -464,22 +474,39 @@ const loadDishes = async () => {
       limit: limit.value,
     }
 
-    if (filters.value.search) params.search = filters.value.search
-    if (filters.value.category_id) params.category_id = filters.value.category_id
-    if (filters.value.is_available !== '') params.is_available = filters.value.is_available
+    // Only send search and category filters to server, not is_available
+    if (filters.value.search) {
+      params.search = filters.value.search
+    }
+
+    if (filters.value.category_id) {
+      params.category_id = filters.value.category_id
+    }
+
+    // Removed: is_available filter - we'll handle this client-side
+    // if (filters.value.is_available !== '') {
+    //   params.is_available = filters.value.is_available
+    // }
 
     console.log('Loading dishes with params:', params)
     const response = await dishesAPI.getAll(params)
-    console.log('Dishes response:', response.data)
 
-    dishes.value = response.data.data || []
-    total.value = response.data.total || 0
+    if (response && response.data) {
+      dishes.value = response.data.data || []
+      total.value = response.data.total || 0
+      console.log(`Loaded ${dishes.value.length} dishes, total: ${total.value}`)
 
-    // Load ingredients for each dish
-    await loadDishIngredients()
+      // Load ingredients for all dishes
+      await loadDishIngredients()
+    } else {
+      console.error('Invalid response structure:', response)
+      dishes.value = []
+      total.value = 0
+    }
   } catch (error) {
     console.error('Error loading dishes:', error)
     dishes.value = []
+    total.value = 0
   } finally {
     loading.value = false
   }

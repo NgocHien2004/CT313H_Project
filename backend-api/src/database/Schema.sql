@@ -26,7 +26,6 @@ CREATE TABLE dishes (
     price NUMERIC(10, 2) NOT NULL,
     image_url TEXT,
     category_id INTEGER REFERENCES categories(id),
-    is_available BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     is_deleted BOOLEAN DEFAULT FALSE
