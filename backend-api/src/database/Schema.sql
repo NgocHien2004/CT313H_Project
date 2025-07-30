@@ -25,6 +25,7 @@ CREATE TABLE dishes (
     description TEXT,
     price NUMERIC(10, 2) NOT NULL,
     image_url TEXT,
+    is_available BOOLEAN DEFAULT TRUE,
     category_id INTEGER REFERENCES categories(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -88,3 +89,38 @@ CREATE TABLE reservations (
     status VARCHAR(20) DEFAULT 'booked', -- booked, canceled, done
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- TRIGGER FUNCTION: Cập nhật trạng thái món ăn dựa trên nguyên liệu
+CREATE OR REPLACE FUNCTION update_dish_availability()
+RETURNS trigger AS $$
+BEGIN
+  -- Đặt is_available = false nếu bất kỳ nguyên liệu nào bị thiếu
+  UPDATE dishes
+  SET is_available = FALSE
+  WHERE id IN (SELECT di.dish_id
+    FROM dish_ingredients di
+    JOIN inventory i ON di.inventory_id = i.id
+    WHERE i.quantity < i.min_quantity
+    GROUP BY di.dish_id
+  );
+
+  -- Đặt is_available = true nếu tất cả nguyên liệu đủ
+  UPDATE dishes
+  SET is_available = TRUE
+  WHERE id NOT IN (
+    SELECT di.dish_id
+    FROM dish_ingredients di
+    JOIN inventory i ON di.inventory_id = i.id
+    WHERE i.quantity < i.min_quantity
+    GROUP BY di.dish_id
+  );
+
+  RETURN NULL; -- hoặc NEW nếu dùng FOR EACH ROW
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE TRIGGER trigger_update_dish_availability
+AFTER INSERT OR UPDATE OR DELETE ON inventory
+FOR EACH STATEMENT
+EXECUTE FUNCTION update_dish_availability();

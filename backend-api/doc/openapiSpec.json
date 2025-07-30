@@ -35,7 +35,8 @@
         },
         "responses": {
           "201": { "description": "User created" },
-          "400": { "description": "Invalid input" }
+          "400": { "description": "Invalid input" },
+          "429": { "description": "Too many requests - rate limit exceeded" }
         }
       }
     },
@@ -55,7 +56,8 @@
         },
         "responses": {
           "200": { "description": "JWT token" },
-          "401": { "description": "Unauthorized" }
+          "401": { "description": "Unauthorized" },
+          "429": { "description": "Too many requests - rate limit exceeded" }
         }
       }
     },
@@ -95,7 +97,9 @@
           }
         },
         "responses": {
-          "201": { "description": "User created" }
+          "201": { "description": "User created" },
+          "400": { "description": "Invalid input" },
+          "429": { "description": "Too many requests - rate limit exceeded" }
         }
       }
     },
@@ -122,7 +126,9 @@
         },
         "responses": {
           "200": { "description": "User updated" },
-          "404": { "description": "User not found" }
+          "400": { "description": "Invalid input" },
+          "404": { "description": "User not found" },
+          "429": { "description": "Too many requests - rate limit exceeded" }
         }
       },
       "delete": {
@@ -192,7 +198,9 @@
           }
         },
         "responses": {
-          "201": { "description": "Dish created" }
+          "201": { "description": "Dish created" },
+          "400": { "description": "Invalid input" },
+          "429": { "description": "Too many requests - rate limit exceeded" }
         }
       }
     },
@@ -232,7 +240,9 @@
         },
         "responses": {
           "200": { "description": "Dish updated" },
-          "404": { "description": "Dish not found" }
+          "400": { "description": "Invalid input" },
+          "404": { "description": "Dish not found" },
+          "429": { "description": "Too many requests - rate limit exceeded" }
         }
       },
       "delete": {
@@ -372,7 +382,9 @@
                 }
               }
             }
-          }
+          },
+          "400": { "description": "Invalid input" },
+          "429": { "description": "Too many requests - rate limit exceeded" }
         }
       }
     },
@@ -440,7 +452,10 @@
                 }
               }
             }
-          }
+          },
+          "400": { "description": "Invalid input" },
+          "404": { "description": "Order not found" },
+          "429": { "description": "Too many requests - rate limit exceeded" }
         }
       },
       "delete": {
@@ -493,7 +508,9 @@
           }
         },
         "responses": {
-          "201": { "description": "Category created" }
+          "201": { "description": "Category created" },
+          "400": { "description": "Invalid input" },
+          "429": { "description": "Too many requests - rate limit exceeded" }
         }
       }
     },
@@ -520,7 +537,9 @@
         },
         "responses": {
           "200": { "description": "Category updated" },
-          "404": { "description": "Category not found" }
+          "400": { "description": "Invalid input" },
+          "404": { "description": "Category not found" },
+          "429": { "description": "Too many requests - rate limit exceeded" }
         }
       },
       "delete": {
@@ -576,7 +595,9 @@
           }
         },
         "responses": {
-          "201": { "description": "Inventory item created" }
+          "201": { "description": "Inventory item created" },
+          "400": { "description": "Invalid input" },
+          "429": { "description": "Too many requests - rate limit exceeded" }
         }
       }
     },
@@ -603,7 +624,9 @@
         },
         "responses": {
           "200": { "description": "Inventory item updated" },
-          "404": { "description": "Inventory item not found" }
+          "400": { "description": "Invalid input" },
+          "404": { "description": "Inventory item not found" },
+          "429": { "description": "Too many requests - rate limit exceeded" }
         }
       },
       "delete": {
@@ -688,7 +711,9 @@
                 }
               }
             }
-          }
+          },
+          "400": { "description": "Invalid input" },
+          "429": { "description": "Too many requests - rate limit exceeded" }
         }
       }
     },
@@ -726,7 +751,10 @@
                 }
               }
             }
-          }
+          },
+          "400": { "description": "Invalid input" },
+          "404": { "description": "Reservation not found" },
+          "429": { "description": "Too many requests - rate limit exceeded" }
         }
       },
       "delete": {
@@ -793,7 +821,8 @@
           }
         },
         "responses": {
-          "201": { "description": "Inventory log created" }
+          "201": { "description": "Inventory log created" },
+          "429": { "description": "Too many requests - rate limit exceeded" }
         }
       }
     },
@@ -871,6 +900,12 @@
           },
           "403": {
             "description": "Forbidden"
+          },
+          "404": {
+            "description": "Dish not found"
+          },
+          "429": {
+            "description": "Too many requests - rate limit exceeded"
           }
         }
       }
@@ -919,6 +954,9 @@
           },
           "404": {
             "description": "Dish ingredient not found"
+          },
+          "429": {
+            "description": "Too many requests - rate limit exceeded"
           }
         }
       },
@@ -997,7 +1035,9 @@
           }
         },
         "responses": {
-          "201": { "description": "Order item created" }
+          "201": { "description": "Order item created" },
+          "400": { "description": "Invalid input" },
+          "429": { "description": "Too many requests - rate limit exceeded" }
         }
       }
     },
@@ -1023,7 +1063,9 @@
         },
         "responses": {
           "200": { "description": "Order item updated" },
-          "404": { "description": "Order item not found" }
+          "400": { "description": "Invalid input" },
+          "404": { "description": "Order item not found" },
+          "429": { "description": "Too many requests - rate limit exceeded" }
         }
       },
       "delete": {
@@ -1228,6 +1270,9 @@
       },
       "404NotFound": {
         "description": "Resource not found"
+      },
+      "429TooManyRequests": {
+        "description": "Too many requests - rate limit exceeded"
       },
       "500Internal": {
         "description": "Internal server error"

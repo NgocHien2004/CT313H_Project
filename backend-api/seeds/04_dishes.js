@@ -45,7 +45,6 @@ function createDish(categoryIds, index) {
     price: faker.number.int({ min: 30000, max: 150000 }),
     image_url: faker.image.urlLoremFlickr({ category: "food" }),
     category_id: faker.helpers.arrayElement(categoryIds),
-    is_available: true,
     is_deleted: false,
     created_at: new Date(),
     updated_at: new Date(),
