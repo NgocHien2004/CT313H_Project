@@ -44,13 +44,19 @@ exports.getAllInventory = async (req, res, next) => {
       offset: 0,
     };
 
-    const inventory = await knex("inventory")
-      .select("*")
-      .where({ is_deleted: false })
-      .limit(limit)
-      .offset(offset);
+    const result = await inventoryService.getAllInventory({
+      page,
+      limit,
+      offset,
+    });
 
-    res.json({ data: inventory, page, limit });
+    res.json({
+      data: result.data,
+      total: result.total,
+      page: result.page,
+      totalPages: result.totalPages,
+      limit,
+    });
   } catch (err) {
     next(err);
   }

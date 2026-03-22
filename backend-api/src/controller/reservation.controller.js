@@ -24,12 +24,20 @@ exports.getAllReservations = async (req, res, next) => {
       date: req.query.date,
     };
 
-    const reservations = await reservationService.getAllReservations({
+    const result = await reservationService.getAllReservations({
+      page,
       limit,
       offset,
       filters,
     });
-    res.json({ data: reservations.data, total: reservations.total, page, limit });
+
+    res.json({
+      data: result.data,
+      total: result.total,
+      page: result.page,
+      totalPages: result.totalPages,
+      limit,
+    });
   } catch (err) {
     next(err);
   }

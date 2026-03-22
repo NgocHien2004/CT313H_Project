@@ -26,18 +26,31 @@ exports.getAllOrders = async (req, res, next) => {
       date: req.query.date,
     };
 
-    let orders;
+    let result;
     if (req.user.role === "admin") {
-      orders = await orderService.getAllOrders({ limit, offset, filters });
+      result = await orderService.getAllOrders({
+        page,
+        limit,
+        offset,
+        filters,
+      });
     } else {
-      orders = await orderService.getOrdersByUser({
+      result = await orderService.getOrdersByUser({
         userId: req.user.id,
+        page,
         limit,
         offset,
         filters,
       });
     }
-    res.json({ data: orders.data, total: orders.total, page, limit });
+
+    res.json({
+      data: result.data,
+      total: result.total,
+      page: result.page,
+      totalPages: result.totalPages,
+      limit,
+    });
   } catch (err) {
     next(err);
   }

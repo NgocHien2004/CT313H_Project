@@ -29,7 +29,7 @@ exports.createOrder = async (data) => {
   return { ...order, total_amount: total };
 };
 
-exports.getAllOrders = async ({ limit, offset, filters = {} }) => {
+exports.getAllOrders = async ({ page, limit = 10, offset, filters = {} }) => {
   // Build query với filters
   let query = knex("orders").select("*");
   let countQuery = knex("orders");
@@ -55,17 +55,39 @@ exports.getAllOrders = async ({ limit, offset, filters = {} }) => {
     countQuery = countQuery.whereBetween("created_at", [startDate, endDate]);
   }
 
+  // 🔥 convert offset -> page
+  if (offset !== undefined) {
+    page = Math.floor(offset / limit) + 1;
+  }
+
+  page = page || 1;
+  const realOffset = (page - 1) * limit;
+
   // Get total count
-  const [totalRow] = await countQuery.count("* as count");
-  const total = Number(totalRow.count);
+  const [{ count }] = await countQuery.count("id as count");
+  const total = Number(count);
 
   // Get data with pagination
-  const data = await query.orderBy("created_at", "desc").limit(limit).offset(offset);
+  const data = await query
+    .orderBy("created_at", "desc")
+    .limit(limit)
+    .offset(realOffset);
 
-  return { data, total };
+  return {
+    data,
+    total,
+    page,
+    totalPages: Math.ceil(total / limit),
+  };
 };
 
-exports.getOrdersByUser = async ({ userId, limit, offset, filters = {} }) => {
+exports.getOrdersByUser = async ({
+  userId,
+  page,
+  limit = 10,
+  offset,
+  filters = {},
+}) => {
   // Build query với filters cho user cụ thể
   let query = knex("orders").where({ user_id: userId }).select("*");
   let countQuery = knex("orders").where({ user_id: userId });
@@ -91,18 +113,37 @@ exports.getOrdersByUser = async ({ userId, limit, offset, filters = {} }) => {
     countQuery = countQuery.whereBetween("created_at", [startDate, endDate]);
   }
 
+  // 🔥 convert offset -> page
+  if (offset !== undefined) {
+    page = Math.floor(offset / limit) + 1;
+  }
+
+  page = page || 1;
+  const realOffset = (page - 1) * limit;
+
   // Get total count
-  const [totalRow] = await countQuery.count("* as count");
-  const total = Number(totalRow.count);
+  const [{ count }] = await countQuery.count("id as count");
+  const total = Number(count);
 
   // Get data with pagination
-  const data = await query.orderBy("created_at", "desc").limit(limit).offset(offset);
+  const data = await query
+    .orderBy("created_at", "desc")
+    .limit(limit)
+    .offset(realOffset);
 
-  return { data, total };
+  return {
+    data,
+    total,
+    page,
+    totalPages: Math.ceil(total / limit),
+  };
 };
 
 exports.updateOrder = async (id, data) => {
-  const [order] = await knex("orders").where("id", id).update(data).returning("*");
+  const [order] = await knex("orders")
+    .where("id", id)
+    .update(data)
+    .returning("*");
   return order;
 };
 

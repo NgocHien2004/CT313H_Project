@@ -16,11 +16,20 @@ exports.getAllInventoryLogs = async (req, res, next) => {
       limit: 10,
       offset: 0,
     };
-    const logs = await inventoryLogService.getAllInventoryLogs({
+
+    const result = await inventoryLogService.getAllInventoryLogs({
+      page,
       limit,
       offset,
     });
-    res.json({ data: logs, page, limit });
+
+    res.json({
+      data: result.data,
+      total: result.total,
+      page: result.page,
+      totalPages: result.totalPages,
+      limit,
+    });
   } catch (err) {
     next(err);
   }

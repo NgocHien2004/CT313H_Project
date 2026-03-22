@@ -46,18 +46,24 @@ exports.getAllDishes = async (req, res, next) => {
       offset: 0,
     };
 
-    // Lấy search parameters từ query
     const filters = {
       search: req.query.search,
       category_id: req.query.category_id,
       is_available: req.query.is_available,
     };
 
-    const result = await dishService.getAllDishes({ limit, offset, filters });
+    const result = await dishService.getAllDishes({
+      page,
+      limit,
+      offset,
+      filters,
+    });
+
     res.json({
       data: result.data,
       total: result.total,
-      page,
+      page: result.page,
+      totalPages: result.totalPages,
       limit,
     });
   } catch (err) {

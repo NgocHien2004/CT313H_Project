@@ -6,12 +6,23 @@ exports.createDish = async (data) => {
   return dish;
 };
 
-exports.getAllDishes = async ({ limit, offset, filters = {} }) => {
-  // Build query với filters
+exports.getAllDishes = async ({
+  page,
+  limit = 10,
+  offset,
+  filters = {},
+}) => {
+  if (offset !== undefined) {
+    page = Math.floor(offset / limit) + 1;
+  }
+
+  page = page || 1;
+  const realOffset = (page - 1) * limit;
+
   let query = knex4("dishes").select("*");
   let countQuery = knex4("dishes");
 
-  // Apply filters
+  // FILTERS
   if (filters.search) {
     const searchPattern = `%${filters.search}%`;
     query = query.where("name", "ilike", searchPattern);
@@ -29,17 +40,22 @@ exports.getAllDishes = async ({ limit, offset, filters = {} }) => {
     countQuery = countQuery.where("is_available", isAvailable);
   }
 
-  // Get total count
-  const [totalRow] = await countQuery.count("* as count");
-  const total = Number(totalRow.count);
+  // TOTAL 
+  const [{ count }] = await countQuery.count("id as count");
+  const total = Number(count);
 
-  // Get data with pagination
+  // DATA 
   const data = await query
     .orderBy("created_at", "desc")
     .limit(limit)
-    .offset(offset);
+    .offset(realOffset);
 
-  return { data, total };
+  return {
+    data,
+    page,
+    total,
+    totalPages: Math.ceil(total / limit),
+  };
 };
 
 exports.updateDish = async (id, data) => {
@@ -55,18 +71,13 @@ exports.deleteDish = async (id) => {
 };
 
 exports.getDishWithIngredientsById = async (dishId) => {
-  // Lấy món ăn theo ID
   const dish = await knex4("dishes").where("id", dishId).first();
 
-  if (!dish) {
-    return null;
-  }
+  if (!dish) return null;
 
-  // Lấy nguyên liệu của món ăn
   const ingredients =
     await dishIngredientService.getDishIngredientsByDishId(dishId);
 
-  // Gắn nguyên liệu vào dish
   return {
     ...dish,
     ingredients,

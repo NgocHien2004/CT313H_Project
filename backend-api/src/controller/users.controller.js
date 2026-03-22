@@ -16,8 +16,14 @@ exports.getAllUsers = async (req, res, next) => {
       limit: 10,
       offset: 0,
     };
-    const users = await userService.getAllUsers({ limit, offset });
-    res.json({ data: users, page, limit });
+
+    const result = await userService.getAllUsers({
+      page,
+      limit,
+      offset,
+    });
+
+    res.json(result);
   } catch (err) {
     next(err);
   }

@@ -2,8 +2,8 @@ const rateLimit = require("express-rate-limit");
 
 // Login route — chống brute force
 const loginLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000, // 10 phút
-  max: 10,
+  windowMs: 5 * 60 * 1000, // 5 phút
+  max: 100000,
   message: "Bạn đã đăng nhập quá nhiều lần. Vui lòng thử lại sau 5 phút.",
 });
 

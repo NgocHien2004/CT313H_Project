@@ -5,7 +5,12 @@ exports.createReservation = async (data) => {
   return resv;
 };
 
-exports.getAllReservations = async ({ limit, offset, filters = {} }) => {
+exports.getAllReservations = async ({
+  page,
+  limit = 10,
+  offset,
+  filters = {},
+}) => {
   // Build query với filters
   let query = knex4("reservations").select("*");
   let countQuery = knex4("reservations");
@@ -32,18 +37,36 @@ exports.getAllReservations = async ({ limit, offset, filters = {} }) => {
     countQuery = countQuery.whereBetween("reservation_time", [startDate, endDate]);
   }
 
+  if (offset !== undefined) {
+    page = Math.floor(offset / limit) + 1;
+  }
+
+  page = page || 1;
+  const realOffset = (page - 1) * limit;
+
   // Get total count
-  const [totalRow] = await countQuery.count("* as count");
-  const total = Number(totalRow.count);
+  const [{ count }] = await countQuery.count("id as count");
+  const total = Number(count);
 
   // Get data with pagination
-  const data = await query.orderBy("created_at", "desc").limit(limit).offset(offset);
+  const data = await query
+    .orderBy("created_at", "desc")
+    .limit(limit)
+    .offset(realOffset);
 
-  return { data, total };
+  return {
+    data,
+    total,
+    page,
+    totalPages: Math.ceil(total / limit),
+  };
 };
 
 exports.updateReservation = async (id, data) => {
-  const [resv] = await knex4("reservations").where("id", id).update(data).returning("*");
+  const [resv] = await knex4("reservations")
+    .where("id", id)
+    .update(data)
+    .returning("*");
   return resv;
 };
 
