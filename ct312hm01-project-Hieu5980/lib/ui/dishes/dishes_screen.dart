@@ -652,7 +652,6 @@ class _DishesScreenState extends State<DishesScreen> {
                           ],
                         ],
 
-                        // Đẩy nút Sửa/Xóa xuống đáy card
                         const Spacer(),
 
                         if (_isAdmin)
@@ -735,11 +734,11 @@ class _DishesScreenState extends State<DishesScreen> {
     ),
   );
 
-  Widget _placeholder() => Container(
+  Widget _placeholder() => Image.asset(
+    'assets/images/placeholder.jpg',
     height: 110,
     width: double.infinity,
-    color: AppColors.gray100,
-    child: const Icon(Icons.restaurant, size: 40, color: AppColors.gray300),
+    fit: BoxFit.cover,
   );
 }
 
@@ -1573,11 +1572,10 @@ class _DishFormScreenState extends State<DishFormScreen>
     );
   }
 
-  Widget _imgPh() => Container(
+  Widget _imgPh() => Image.asset(
+    'assets/images/placeholder.jpg',
     height: 180,
-    color: AppColors.gray100,
-    child: const Center(
-      child: Icon(Icons.restaurant, size: 48, color: AppColors.gray300),
-    ),
+    width: double.infinity,
+    fit: BoxFit.cover,
   );
 }
