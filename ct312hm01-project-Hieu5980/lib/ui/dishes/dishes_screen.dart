@@ -292,7 +292,6 @@ class _DishesScreenState extends State<DishesScreen> {
           : null,
       body: Column(
         children: [
-          // ── Filter bar ──────────────────────────────────────────────────
           Container(
             color: Colors.white,
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
@@ -420,7 +419,6 @@ class _DishesScreenState extends State<DishesScreen> {
 
           Expanded(child: _buildGrid(displayed)),
 
-          // ── Pagination ──────────────────────────────────────────────────
           if (!_isLoading && _totalFiltered > _limit)
             Container(
               color: Colors.white,
@@ -504,7 +502,6 @@ class _DishesScreenState extends State<DishesScreen> {
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          // Chiều cao đủ cho cả nút admin, non-admin dùng ít hơn nhưng ok
           mainAxisExtent: _isAdmin ? 290.0 : 250.0,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
@@ -532,7 +529,6 @@ class _DishesScreenState extends State<DishesScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── Ảnh (chiều cao cố định 110) ─────────────────────────
                 Stack(
                   children: [
                     ClipRRect(
@@ -586,7 +582,6 @@ class _DishesScreenState extends State<DishesScreen> {
                   ],
                 ),
 
-                // ── Info (Expanded fill phần còn lại) ───────────────────
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
@@ -748,9 +743,6 @@ class _DishesScreenState extends State<DishesScreen> {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// DishFormScreen
-// ─────────────────────────────────────────────────────────────────────────────
 class DishFormScreen extends StatefulWidget {
   final Dish? dish;
   final List<Category> categories;
@@ -1207,7 +1199,6 @@ class _DishFormScreenState extends State<DishFormScreen>
       body: TabBarView(
         controller: _tabCtrl,
         children: [
-          // ── Tab 1: Thông tin ──────────────────────────────────────────
           SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Form(
@@ -1381,7 +1372,6 @@ class _DishFormScreenState extends State<DishFormScreen>
             ),
           ),
 
-          // ── Tab 2: Nguyên liệu ────────────────────────────────────────
           !_isEdit
               ? const Center(
                   child: Padding(

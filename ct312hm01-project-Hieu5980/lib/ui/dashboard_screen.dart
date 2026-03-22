@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../Themes/app_colors.dart';
+import '../providers/user_provider.dart';
+import '../service_locator.dart';
 import '../services/api/dishes_api.dart';
 import '../services/api/orders_api.dart';
 import '../services/api/reservations_api.dart';
@@ -16,14 +18,10 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  final _storage = const FlutterSecureStorage();
-  final _dishesApi = DishesAPI();
-  final _ordersApi = OrdersAPI();
-  final _resApi = ReservationsAPI();
-  final _userApi = UserAPI();
-
-  String _userName = '';
-  bool _isAdmin = false;
+  final _dishesApi = sl<DishesAPI>();
+  final _ordersApi = sl<OrdersAPI>();
+  final _resApi = sl<ReservationsAPI>();
+  final _userApi = sl<UserAPI>();
 
   int _totalDishes = 0;
   int _totalOrders = 0;
@@ -34,28 +32,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _loadUser().then((_) => _loadStats());
-  }
-
-  Future<void> _loadUser() async {
-    final name = await _storage.read(key: 'user_name');
-    final role = await _storage.read(key: 'user_role');
-    if (!mounted) return;
-    setState(() {
-      _userName = name ?? 'Người dùng';
-      _isAdmin = role == 'admin';
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await context.read<UserProvider>().loadFromStorage();
+      _loadStats();
     });
   }
 
   Future<void> _loadStats() async {
     if (!mounted) return;
+    final isAdmin = context.read<UserProvider>().isAdmin;
+
     setState(() => _loadingStats = true);
     try {
       final results = await Future.wait([
         _dishesApi.getAll(params: {'limit': 1}),
         _ordersApi.getAll(params: {'limit': 1}),
         _resApi.getAll(params: {'limit': 1}),
-        if (_isAdmin) _userApi.getAll(params: {'limit': 1000}),
+        if (isAdmin) _userApi.getAll(params: {'limit': 1000}),
       ]);
 
       final dishTotal =
@@ -71,7 +64,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           (results[2].data['data'] as List?)?.length ??
           0;
       int userTotal = 0;
-      if (_isAdmin && results.length > 3) {
+      if (isAdmin && results.length > 3) {
         final rawUsers = results[3].data['data'] ?? results[3].data;
         if (rawUsers is List) userTotal = rawUsers.length;
       }
@@ -116,94 +109,103 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
     if (ok != true) return;
-    await _storage.deleteAll();
-    if (mounted) context.go(RouteNames.login);
+    if (mounted) {
+      await context.read<UserProvider>().logout();
+      context.go(RouteNames.login);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.gray50,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Restaurant Manager',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-              ),
+    return Consumer<UserProvider>(
+      builder: (context, userProvider, _) {
+        final userName = userProvider.userName;
+        final isAdmin = userProvider.isAdmin;
+
+        return Scaffold(
+          backgroundColor: AppColors.gray50,
+          appBar: AppBar(
+            automaticallyImplyLeading: false,
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Restaurant Manager',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
+                Text(
+                  isAdmin ? 'Quản trị viên' : 'Nhân viên',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.white70,
+                  ),
+                ),
+              ],
             ),
-            Text(
-              _isAdmin ? 'Quản trị viên' : 'Nhân viên',
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w400,
-                color: Colors.white70,
-              ),
-            ),
-          ],
-        ),
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [AppColors.primary, AppColors.secondary],
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ),
-          ),
-        ),
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: _logout,
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: _loadStats,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildWelcomeCard(),
-              const SizedBox(height: 20),
-              const Text(
-                'Thống kê',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.gray900,
+            flexibleSpace: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.primary, AppColors.secondary],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
                 ),
               ),
-              const SizedBox(height: 12),
-              _buildStatsGrid(),
-              const SizedBox(height: 24),
-              const Text(
-                'Quản lý',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.gray900,
-                ),
+            ),
+            elevation: 0,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.logout, color: Colors.white),
+                onPressed: _logout,
               ),
-              const SizedBox(height: 12),
-              _buildNavMenu(),
-              const SizedBox(height: 20),
             ],
           ),
-        ),
-      ),
+          body: RefreshIndicator(
+            onRefresh: _loadStats,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildWelcomeCard(userName, isAdmin),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Thống kê',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.gray900,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildStatsGrid(isAdmin),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Quản lý',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.gray900,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildNavMenu(isAdmin),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildWelcomeCard() {
+  Widget _buildWelcomeCard(String userName, bool isAdmin) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -229,7 +231,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Chào mừng, $_userName!',
+                  'Chào mừng, $userName!',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
@@ -253,7 +255,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             child: Center(
               child: Text(
-                _userName.isNotEmpty ? _userName[0].toUpperCase() : '?',
+                userName.isNotEmpty ? userName[0].toUpperCase() : '?',
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
@@ -267,7 +269,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildStatsGrid() {
+  Widget _buildStatsGrid(bool isAdmin) {
     final stats = [
       _StatItem(
         'Tổng món ăn',
@@ -287,7 +289,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Icons.calendar_today,
         const Color(0xFFF59E0B),
       ),
-      if (_isAdmin)
+      if (isAdmin)
         _StatItem('Người dùng', _totalUsers, Icons.people, AppColors.secondary),
     ];
 
@@ -362,7 +364,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildNavMenu() {
+  Widget _buildNavMenu(bool isAdmin) {
     final items = [
       _NavItem(
         Icons.restaurant_menu,
@@ -385,7 +387,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         RouteNames.reservations,
         const Color(0xFFF59E0B),
       ),
-      if (_isAdmin) ...[
+      if (isAdmin) ...[
         _NavItem(
           Icons.category,
           'Danh mục',

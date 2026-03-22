@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'route_names.dart';
 import '../ui/auth/login_screen.dart';
 import '../ui/auth/register_screen.dart';
@@ -10,6 +11,8 @@ import '../ui/orders/orders_screen.dart';
 import '../ui/inventory/inventory_screen.dart';
 import '../ui/reservations/reservations_screen.dart';
 import '../ui/users/users_screen.dart';
+
+final _storage = const FlutterSecureStorage();
 
 CustomTransitionPage<void> _slidePage(Widget child, GoRouterState state) {
   return CustomTransitionPage<void>(
@@ -60,6 +63,22 @@ CustomTransitionPage<void> _slideUpPage(Widget child, GoRouterState state) {
 final GoRouter appRouter = GoRouter(
   initialLocation: RouteNames.login,
   debugLogDiagnostics: false,
+
+  redirect: (context, state) async {
+    final token = await _storage.read(key: 'token');
+    final isLoggedIn = token != null && token.isNotEmpty;
+
+    final isAuthRoute =
+        state.matchedLocation == RouteNames.login ||
+        state.matchedLocation == RouteNames.register;
+
+    if (!isLoggedIn && !isAuthRoute) return RouteNames.login;
+
+    if (isLoggedIn && isAuthRoute) return RouteNames.dashboard;
+
+    return null;
+  },
+
   routes: [
     GoRoute(
       path: RouteNames.login,
@@ -103,6 +122,7 @@ final GoRouter appRouter = GoRouter(
       pageBuilder: (context, state) => _slidePage(const UsersScreen(), state),
     ),
   ],
+
   errorPageBuilder: (context, state) => _fadePage(const LoginScreen(), state),
 );
 

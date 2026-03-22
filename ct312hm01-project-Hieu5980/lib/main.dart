@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'routes/app_routes.dart';
 import 'services/notification_service.dart';
+import 'providers/user_provider.dart';
+import 'service_locator.dart';
 
 final RouteObserver<ModalRoute<void>> routeObserver =
     RouteObserver<ModalRoute<void>>();
@@ -8,11 +11,14 @@ final RouteObserver<ModalRoute<void>> routeObserver =
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  final notif = NotificationService();
-  await notif.init();
-  await notif.requestPermission();
+  setupServiceLocator();
 
-  runApp(const MyApp());
+  await sl<NotificationService>().init();
+  await sl<NotificationService>().requestPermission();
+
+  runApp(
+    ChangeNotifierProvider(create: (_) => UserProvider(), child: const MyApp()),
+  );
 }
 
 class MyApp extends StatelessWidget {

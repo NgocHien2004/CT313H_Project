@@ -607,7 +607,6 @@ class _InventoryScreenState extends State<InventoryScreen>
       body: TabBarView(
         controller: _tabCtrl,
         children: [
-          // Tab 1: Nguyên liệu
           _loadingItems
               ? const Center(child: CircularProgressIndicator())
               : _items.isEmpty
@@ -733,7 +732,6 @@ class _InventoryScreenState extends State<InventoryScreen>
                   ),
                 ),
 
-          // Tab 2: Lịch sử
           _loadingLogs
               ? const Center(child: CircularProgressIndicator())
               : _logs.isEmpty

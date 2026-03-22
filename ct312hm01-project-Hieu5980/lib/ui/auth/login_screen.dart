@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:provider/provider.dart';
 import '../../Themes/app_colors.dart';
+import '../../providers/user_provider.dart';
+import '../../service_locator.dart';
 import '../../services/api/auth_api.dart';
 import '../../routes/app_routes.dart';
 import '../../routes/route_names.dart';
@@ -16,8 +18,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
-  final _authAPI = AuthAPI();
-  final _storage = const FlutterSecureStorage();
+
+  final _authAPI = sl<AuthAPI>();
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -43,12 +45,13 @@ class _LoginScreenState extends State<LoginScreen> {
       final token = res.data['token']?.toString() ?? '';
       final user = res.data['user'] as Map<String, dynamic>? ?? {};
 
-      await _storage.write(key: 'token', value: token);
-      await _storage.write(key: 'user_id', value: user['id']?.toString());
-      await _storage.write(key: 'user_role', value: user['role']?.toString());
-      await _storage.write(key: 'user_name', value: user['name']?.toString());
-
       if (mounted) {
+        await context.read<UserProvider>().setUser(
+          id: user['id']?.toString() ?? '',
+          name: user['name']?.toString() ?? '',
+          role: user['role']?.toString() ?? 'user',
+          token: token,
+        );
         AppRoutes.navigateAndClearStack(context, RouteNames.dashboard);
       }
     } catch (_) {
@@ -91,7 +94,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-
                   const Text(
                     'Đăng nhập',
                     textAlign: TextAlign.center,
@@ -102,7 +104,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -128,7 +129,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                   const SizedBox(height: 32),
-
                   Form(
                     key: _formKey,
                     child: Column(
@@ -162,18 +162,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 16),
-
                   if (_errorMessage != null)
                     _buildMessage(
                       _errorMessage!,
                       AppColors.red50,
                       AppColors.red700,
                     ),
-
                   const SizedBox(height: 8),
-
                   ElevatedButton(
                     onPressed: _isLoading ? null : _handleLogin,
                     style: ElevatedButton.styleFrom(
