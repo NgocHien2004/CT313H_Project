@@ -116,8 +116,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Xác nhận xóa'),
         content: Text(
-          'Bạn có chắc muốn xóa đơn hàng #${order.id}?\n'
-          'Hành động này không thể hoàn tác.',
+          'Bạn có chắc muốn xóa đơn hàng #${order.id}?\nHành động này không thể hoàn tác.',
         ),
         actions: [
           TextButton(
@@ -151,6 +150,118 @@ class _OrdersScreenState extends State<OrdersScreen> {
     }
   }
 
+  String? _checkIngredientSufficiency({
+    required int dishId,
+    required int addQty,
+    required Map<int, int> cart,
+    required Map<int, List<DishIngredient>> ingMap,
+    required Map<int, Inventory> invMap,
+  }) {
+    final ingredients = ingMap[dishId] ?? [];
+    if (ingredients.isEmpty) return null;
+    final currentQty = cart[dishId] ?? 0;
+    final newTotal = currentQty + addQty;
+    for (final ing in ingredients) {
+      final inv = invMap[ing.inventoryId];
+      if (inv == null) continue;
+      final needed = ing.quantityRequired * newTotal;
+      if (inv.quantity < needed) {
+        return 'Không đủ "${inv.name}"\nCần: ${needed.toStringAsFixed(0)} ${inv.unit ?? ''}  •  Tồn: ${inv.quantity} ${inv.unit ?? ''}';
+      }
+    }
+    return null;
+  }
+
+  String? _checkIngredientForExistingOrder({
+    required int dishId,
+    required int addQty,
+    required List<OrderItem> existingItems,
+    required Map<int, List<DishIngredient>> ingMap,
+    required Map<int, Inventory> invMap,
+  }) {
+    final ingredients = ingMap[dishId] ?? [];
+    if (ingredients.isEmpty) return null;
+    final existingQty = existingItems
+        .where((it) => it.dishId == dishId)
+        .fold(0, (sum, it) => sum + it.quantity);
+    final newTotal = existingQty + addQty;
+    for (final ing in ingredients) {
+      final inv = invMap[ing.inventoryId];
+      if (inv == null) continue;
+      final needed = ing.quantityRequired * newTotal;
+      if (inv.quantity < needed) {
+        return 'Không đủ "${inv.name}"\nCần: ${needed.toStringAsFixed(0)} ${inv.unit ?? ''}  •  Tồn: ${inv.quantity} ${inv.unit ?? ''}';
+      }
+    }
+    return null;
+  }
+
+  void _showIngredientError(BuildContext ctx, String message) {
+    showDialog(
+      context: ctx,
+      barrierColor: Colors.black26,
+      builder: (dCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+        titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+        title: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.orange.shade700,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Text(
+              'Không đủ nguyên liệu',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: AppColors.gray900,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          message,
+          style: const TextStyle(
+            fontSize: 14,
+            color: AppColors.gray700,
+            height: 1.5,
+          ),
+        ),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: TextButton(
+              onPressed: () => Navigator.pop(dCtx),
+              style: TextButton.styleFrom(
+                backgroundColor: AppColors.primary600,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+              ),
+              child: const Text(
+                'Đã hiểu',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _showCreateOrder() async {
     List<Dish> allDishes = [];
     Map<int, List<DishIngredient>> ingMap = {};
@@ -162,14 +273,16 @@ class _OrdersScreenState extends State<OrdersScreen> {
     bool loadingDishes = true;
     String? formErr;
 
-    String _imgUrl(String? url) {
+    String imgUrl(String? url) {
       if (url == null || url.isEmpty) return '';
       if (url.startsWith('http')) return url;
       return 'http://10.0.2.2:3000$url';
     }
 
-    await showDialog(
+    await showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setS) {
           if (loadingDishes) {
@@ -182,18 +295,15 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       (results[0].data['data'] ?? results[0].data) as List;
                   final List rawI =
                       (results[1].data['data'] ?? results[1].data) as List;
-
                   final dishes = rawD
                       .map((e) => Dish.fromJson(e as Map<String, dynamic>))
                       .where((d) => !d.isDeleted)
                       .toList();
-
                   final iMap = <int, Inventory>{};
                   for (final e in rawI) {
                     final inv = Inventory.fromJson(e as Map<String, dynamic>);
                     if (!inv.isDeleted) iMap[_id(inv.id)] = inv;
                   }
-
                   final ingResults = await Future.wait(
                     dishes.map(
                       (d) => _ingApi
@@ -221,11 +331,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   final gMap = Map<int, List<DishIngredient>>.fromEntries(
                     ingResults,
                   );
-
                   final available = dishes
                       .where((d) => calcDishAvailable(_id(d.id), gMap, iMap))
                       .toList();
-
                   setS(() {
                     allDishes = available;
                     ingMap = gMap;
@@ -241,386 +349,717 @@ class _OrdersScreenState extends State<OrdersScreen> {
             return s + (d?.price ?? 0) * e.value;
           });
 
-          return AlertDialog(
-            title: const Text('Tạo đơn hàng mới'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: Form(
-                key: formKey,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
+          final screenH = MediaQuery.of(ctx).size.height;
+
+          return Container(
+            height: screenH * 0.92,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 10, bottom: 4),
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.gray300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
+                  child: Row(
                     children: [
-                      if (formErr != null) _errBox(formErr!),
-
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Số bàn',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.gray700,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          TextFormField(
-                            controller: tableCtrl,
-                            keyboardType: TextInputType.number,
-                            decoration: _inputDeco('Nhập số bàn'),
-                            validator: (v) {
-                              if (v == null || v.isEmpty) return 'Bắt buộc';
-                              if (int.tryParse(v) == null)
-                                return 'Số không hợp lệ';
-                              return null;
-                            },
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-
-                      if (cart.isNotEmpty) ...[
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: AppColors.gray50,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: AppColors.gray300),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Đã chọn:',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 13,
-                                  color: AppColors.gray900,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              ...cart.entries.map((entry) {
-                                final d = allDishes
-                                    .where((d) => _id(d.id) == entry.key)
-                                    .firstOrNull;
-                                final url = _imgUrl(d?.imageUrl);
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 6),
-                                  child: Row(
-                                    children: [
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(6),
-                                        child: url.isNotEmpty
-                                            ? Image.network(
-                                                url,
-                                                width: 36,
-                                                height: 36,
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (_, __, ___) =>
-                                                    _miniPh(),
-                                              )
-                                            : _miniPh(),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              d?.name ?? '#${entry.key}',
-                                              style: const TextStyle(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                            if (d != null)
-                                              Text(
-                                                _fmtVnd(d.price * entry.value),
-                                                style: const TextStyle(
-                                                  fontSize: 11,
-                                                  color: AppColors.primary600,
-                                                ),
-                                              ),
-                                          ],
-                                        ),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.remove_circle_outline,
-                                          size: 18,
-                                        ),
-                                        onPressed: () => setS(() {
-                                          if (entry.value <= 1)
-                                            cart.remove(entry.key);
-                                          else
-                                            cart[entry.key] = entry.value - 1;
-                                        }),
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(
-                                          minWidth: 28,
-                                          minHeight: 28,
-                                        ),
-                                      ),
-                                      Text(
-                                        '${entry.value}',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.add_circle_outline,
-                                          size: 18,
-                                        ),
-                                        onPressed: () => setS(
-                                          () =>
-                                              cart[entry.key] = entry.value + 1,
-                                        ),
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(
-                                          minWidth: 28,
-                                          minHeight: 28,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }),
-                              const Divider(height: 12),
-                              Text(
-                                'Tổng: ${_fmtVnd(total)}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.primary600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          loadingDishes
-                              ? 'Đang tải món ăn...'
-                              : 'Chọn món (${allDishes.length} có sẵn):',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.gray700,
-                          ),
+                      const Text(
+                        'Tạo đơn hàng',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.gray900,
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      loadingDishes
-                          ? const Padding(
-                              padding: EdgeInsets.all(24),
-                              child: Center(child: CircularProgressIndicator()),
-                            )
-                          : allDishes.isEmpty
-                          ? const Padding(
-                              padding: EdgeInsets.all(16),
-                              child: Text(
-                                'Không có món nào đủ nguyên liệu.',
-                                style: TextStyle(color: AppColors.gray600),
-                                textAlign: TextAlign.center,
-                              ),
-                            )
-                          : SizedBox(
-                              height: 220,
-                              child: ListView.builder(
-                                itemCount: allDishes.length,
-                                itemBuilder: (_, i) {
-                                  final d = allDishes[i];
-                                  final dishId = _id(d.id);
-                                  final url = _imgUrl(d.imageUrl);
-                                  final inCart = cart.containsKey(dishId);
-
-                                  return ListTile(
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 4,
-                                      vertical: 2,
-                                    ),
-                                    leading: ClipRRect(
-                                      borderRadius: BorderRadius.circular(6),
-                                      child: url.isNotEmpty
-                                          ? Image.network(
-                                              url,
-                                              width: 48,
-                                              height: 48,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (_, __, ___) =>
-                                                  _dishPh(),
-                                            )
-                                          : _dishPh(),
-                                    ),
-                                    title: Text(
-                                      d.name,
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w500,
-                                        color: AppColors.gray900,
-                                      ),
-                                    ),
-                                    subtitle: Text(
-                                      _fmtVnd(d.price),
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: AppColors.primary600,
-                                      ),
-                                    ),
-                                    trailing: inCart
-                                        ? Container(
-                                            decoration: BoxDecoration(
-                                              color: AppColors.green50,
-                                              borderRadius:
-                                                  BorderRadius.circular(20),
-                                              border: Border.all(
-                                                color: AppColors.green700
-                                                    .withOpacity(0.3),
-                                              ),
-                                            ),
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 2,
-                                            ),
-                                            child: Text(
-                                              '✓ ${cart[dishId]}',
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w700,
-                                                color: AppColors.green700,
-                                              ),
-                                            ),
-                                          )
-                                        : IconButton(
-                                            icon: const Icon(
-                                              Icons.add_circle_outline,
-                                              color: AppColors.green700,
-                                              size: 24,
-                                            ),
-                                            onPressed: () => setS(
-                                              () => cart[dishId] =
-                                                  (cart[dishId] ?? 0) + 1,
-                                            ),
-                                            padding: EdgeInsets.zero,
-                                            constraints: const BoxConstraints(
-                                              minWidth: 36,
-                                              minHeight: 36,
-                                            ),
-                                          ),
-                                    onTap: () => setS(
-                                      () => cart[dishId] =
-                                          (cart[dishId] ?? 0) + 1,
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: AppColors.gray600),
+                        onPressed: () => Navigator.pop(ctx),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
                     ],
                   ),
                 ),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Hủy'),
-              ),
-              ElevatedButton(
-                onPressed: (saving || cart.isEmpty)
-                    ? null
-                    : () async {
-                        if (!formKey.currentState!.validate()) return;
-                        setS(() {
-                          saving = true;
-                          formErr = null;
-                        });
-                        try {
-                          final userId = await _storage.read(key: 'user_id');
-                          await _ordersApi.create({
-                            'table_number': int.parse(tableCtrl.text.trim()),
-                            if (userId != null) 'user_id': int.parse(userId),
-                            'items': cart.entries
-                                .map(
-                                  (e) => {
-                                    'dish_id': e.key,
-                                    'quantity': e.value,
-                                  },
-                                )
-                                .toList(),
-                          });
-                          if (ctx.mounted) Navigator.pop(ctx);
-                          _load();
-                        } on DioException catch (e) {
-                          setS(
-                            () => formErr =
-                                (e.response?.data as Map?)?['error']
-                                    ?.toString() ??
-                                'Lỗi tạo đơn hàng',
-                          );
-                        } finally {
-                          setS(() => saving = false);
-                        }
-                      },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary600,
-                  foregroundColor: Colors.white,
-                ),
-                child: saving
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
+
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                  child: Form(
+                    key: formKey,
+                    child: TextFormField(
+                      controller: tableCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(
+                          Icons.table_restaurant,
+                          color: AppColors.gray600,
+                          size: 20,
                         ),
-                      )
-                    : const Text('Tạo đơn'),
-              ),
-            ],
+                        hintText: 'Nhập số bàn',
+                        hintStyle: const TextStyle(color: AppColors.gray300),
+                        filled: true,
+                        fillColor: AppColors.gray50,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 12,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide.none,
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: Colors.red),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(
+                            color: AppColors.primary500,
+                            width: 1.5,
+                          ),
+                        ),
+                        focusedErrorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(
+                            color: Colors.red,
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.isEmpty)
+                          return 'Vui lòng nhập số bàn';
+                        if (int.tryParse(v) == null) return 'Số không hợp lệ';
+                        return null;
+                      },
+                    ),
+                  ),
+                ),
+
+                if (formErr != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.red50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        formErr!,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppColors.red700,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                const Divider(height: 1, thickness: 0.5),
+
+                Expanded(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 5,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+                              child: Text(
+                                loadingDishes
+                                    ? 'Đang tải...'
+                                    : 'Thực đơn (${allDishes.length})',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.gray600,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: loadingDishes
+                                  ? const Center(
+                                      child: CircularProgressIndicator(),
+                                    )
+                                  : allDishes.isEmpty
+                                  ? const Center(
+                                      child: Text(
+                                        'Không có món',
+                                        style: TextStyle(
+                                          color: AppColors.gray600,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    )
+                                  : ListView.builder(
+                                      padding: const EdgeInsets.fromLTRB(
+                                        10,
+                                        0,
+                                        6,
+                                        80,
+                                      ),
+                                      itemCount: allDishes.length,
+                                      itemBuilder: (_, i) {
+                                        final d = allDishes[i];
+                                        final dishId = _id(d.id);
+                                        final url = imgUrl(d.imageUrl);
+                                        final qty = cart[dishId] ?? 0;
+                                        final inCart = qty > 0;
+
+                                        return GestureDetector(
+                                          onTap: () {
+                                            final err =
+                                                _checkIngredientSufficiency(
+                                                  dishId: dishId,
+                                                  addQty: 1,
+                                                  cart: cart,
+                                                  ingMap: ingMap,
+                                                  invMap: invMap,
+                                                );
+                                            if (err != null) {
+                                              _showIngredientError(ctx, err);
+                                            } else {
+                                              setS(
+                                                () => cart[dishId] = qty + 1,
+                                              );
+                                            }
+                                          },
+                                          child: Container(
+                                            margin: const EdgeInsets.only(
+                                              bottom: 6,
+                                            ),
+                                            padding: const EdgeInsets.all(8),
+                                            decoration: BoxDecoration(
+                                              color: inCart
+                                                  ? AppColors.primary600
+                                                        .withOpacity(0.06)
+                                                  : Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              border: Border.all(
+                                                color: inCart
+                                                    ? AppColors.primary600
+                                                          .withOpacity(0.3)
+                                                    : AppColors.gray300,
+                                                width: inCart ? 1.5 : 0.5,
+                                              ),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                ClipRRect(
+                                                  borderRadius:
+                                                      BorderRadius.circular(7),
+                                                  child: url.isNotEmpty
+                                                      ? Image.network(
+                                                          url,
+                                                          width: 42,
+                                                          height: 42,
+                                                          fit: BoxFit.cover,
+                                                          errorBuilder:
+                                                              (_, __, ___) =>
+                                                                  _dishPh42(),
+                                                        )
+                                                      : _dishPh42(),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Text(
+                                                        d.name,
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          color: inCart
+                                                              ? AppColors
+                                                                    .primary600
+                                                              : AppColors
+                                                                    .gray900,
+                                                        ),
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                      Text(
+                                                        _fmtVnd(d.price),
+                                                        style: const TextStyle(
+                                                          fontSize: 11,
+                                                          color:
+                                                              AppColors.gray600,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                if (inCart)
+                                                  Container(
+                                                    width: 22,
+                                                    height: 22,
+                                                    decoration:
+                                                        const BoxDecoration(
+                                                          color: AppColors
+                                                              .primary600,
+                                                          shape:
+                                                              BoxShape.circle,
+                                                        ),
+                                                    child: Center(
+                                                      child: Text(
+                                                        '$qty',
+                                                        style: const TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 11,
+                                                          fontWeight:
+                                                              FontWeight.w700,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  )
+                                                else
+                                                  const Icon(
+                                                    Icons.add_circle_outline,
+                                                    color: AppColors.gray300,
+                                                    size: 18,
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      Container(width: 0.5, color: AppColors.gray300),
+
+                      Expanded(
+                        flex: 4,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(10, 10, 10, 6),
+                              child: Row(
+                                children: [
+                                  const Text(
+                                    'Đã chọn',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.gray600,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  if (cart.isNotEmpty)
+                                    GestureDetector(
+                                      onTap: () => setS(() => cart.clear()),
+                                      child: const Text(
+                                        'Xóa hết',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.red700,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              child: cart.isEmpty
+                                  ? Center(
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: const [
+                                          Icon(
+                                            Icons.shopping_cart_outlined,
+                                            size: 32,
+                                            color: AppColors.gray300,
+                                          ),
+                                          SizedBox(height: 6),
+                                          Text(
+                                            'Chưa chọn\nmón nào',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: AppColors.gray600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  : ListView(
+                                      padding: const EdgeInsets.fromLTRB(
+                                        10,
+                                        0,
+                                        10,
+                                        8,
+                                      ),
+                                      children: cart.entries.map((entry) {
+                                        final d = allDishes
+                                            .where(
+                                              (d) => _id(d.id) == entry.key,
+                                            )
+                                            .firstOrNull;
+                                        final url = imgUrl(d?.imageUrl);
+                                        return Container(
+                                          margin: const EdgeInsets.only(
+                                            bottom: 6,
+                                          ),
+                                          padding: const EdgeInsets.all(7),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.gray50,
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            border: Border.all(
+                                              color: AppColors.primary600
+                                                  .withOpacity(0.15),
+                                            ),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              ClipRRect(
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
+                                                child: url.isNotEmpty
+                                                    ? Image.network(
+                                                        url,
+                                                        width: 36,
+                                                        height: 36,
+                                                        fit: BoxFit.cover,
+                                                        errorBuilder:
+                                                            (_, __, ___) =>
+                                                                _cartImgPh(),
+                                                      )
+                                                    : _cartImgPh(),
+                                              ),
+                                              const SizedBox(width: 7),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      d?.name ??
+                                                          '#${entry.key}',
+                                                      style: const TextStyle(
+                                                        fontSize: 11,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color:
+                                                            AppColors.gray900,
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                    Text(
+                                                      d != null
+                                                          ? _fmtVnd(
+                                                              d.price *
+                                                                  entry.value,
+                                                            )
+                                                          : '',
+                                                      style: const TextStyle(
+                                                        fontSize: 10,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: AppColors
+                                                            .primary600,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  _circleBtn(
+                                                    Icons.remove,
+                                                    () => setS(() {
+                                                      if (entry.value <= 1)
+                                                        cart.remove(entry.key);
+                                                      else
+                                                        cart[entry.key] =
+                                                            entry.value - 1;
+                                                    }),
+                                                  ),
+                                                  Padding(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 5,
+                                                        ),
+                                                    child: Text(
+                                                      '${entry.value}',
+                                                      style: const TextStyle(
+                                                        fontSize: 12,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                        color:
+                                                            AppColors.gray900,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  _circleBtn(Icons.add, () {
+                                                    final err =
+                                                        _checkIngredientSufficiency(
+                                                          dishId: entry.key,
+                                                          addQty: 1,
+                                                          cart: cart,
+                                                          ingMap: ingMap,
+                                                          invMap: invMap,
+                                                        );
+                                                    if (err != null) {
+                                                      _showIngredientError(
+                                                        ctx,
+                                                        err,
+                                                      );
+                                                    } else {
+                                                      setS(
+                                                        () => cart[entry.key] =
+                                                            entry.value + 1,
+                                                      );
+                                                    }
+                                                  }),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
+                            ),
+
+                            if (cart.isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.fromLTRB(
+                                  10,
+                                  8,
+                                  10,
+                                  8,
+                                ),
+                                decoration: const BoxDecoration(
+                                  border: Border(
+                                    top: BorderSide(
+                                      color: AppColors.gray300,
+                                      width: 0.5,
+                                    ),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Text(
+                                      'Tổng',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.gray700,
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    Text(
+                                      _fmtVnd(total),
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.primary600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                Container(
+                  padding: EdgeInsets.fromLTRB(
+                    20,
+                    12,
+                    20,
+                    MediaQuery.of(ctx).padding.bottom + 12,
+                  ),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    border: Border(
+                      top: BorderSide(color: AppColors.gray300, width: 0.5),
+                    ),
+                  ),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: (saving || cart.isEmpty)
+                          ? null
+                          : () async {
+                              if (!formKey.currentState!.validate()) return;
+                              setS(() {
+                                saving = true;
+                                formErr = null;
+                              });
+                              try {
+                                final userId = await _storage.read(
+                                  key: 'user_id',
+                                );
+                                await _ordersApi.create({
+                                  'table_number': int.parse(
+                                    tableCtrl.text.trim(),
+                                  ),
+                                  if (userId != null)
+                                    'user_id': int.parse(userId),
+                                  'items': cart.entries
+                                      .map(
+                                        (e) => {
+                                          'dish_id': e.key,
+                                          'quantity': e.value,
+                                        },
+                                      )
+                                      .toList(),
+                                });
+                                if (ctx.mounted) Navigator.pop(ctx);
+                                _load();
+                              } on DioException catch (e) {
+                                setS(
+                                  () => formErr =
+                                      (e.response?.data as Map?)?['error']
+                                          ?.toString() ??
+                                      'Lỗi tạo đơn hàng',
+                                );
+                              } finally {
+                                setS(() => saving = false);
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary600,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: AppColors.primary600
+                            .withOpacity(0.4),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: saving
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              cart.isEmpty
+                                  ? 'Chọn ít nhất 1 món'
+                                  : 'Tạo đơn  •  ${_fmtVnd(total)}',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           );
         },
       ),
     );
   }
 
-  Widget _miniPh() => Container(
+  Widget _circleBtn(IconData icon, VoidCallback onTap) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      width: 22,
+      height: 22,
+      decoration: const BoxDecoration(
+        color: AppColors.gray100,
+        shape: BoxShape.circle,
+      ),
+      child: Icon(icon, size: 13, color: AppColors.gray700),
+    ),
+  );
+
+  Widget _dishPh42() => Container(
+    width: 42,
+    height: 42,
+    decoration: BoxDecoration(
+      color: AppColors.gray100,
+      borderRadius: BorderRadius.circular(7),
+    ),
+    child: const Icon(Icons.restaurant, size: 20, color: AppColors.gray300),
+  );
+
+  Widget _cartImgPh() => Container(
     width: 36,
     height: 36,
+    decoration: BoxDecoration(
+      color: AppColors.gray100,
+      borderRadius: BorderRadius.circular(6),
+    ),
+    child: const Icon(Icons.restaurant, size: 16, color: AppColors.gray300),
+  );
+
+  Widget _miniPh() => Container(
+    width: 40,
+    height: 40,
     color: AppColors.gray100,
     child: const Icon(Icons.restaurant, size: 18, color: AppColors.gray300),
   );
 
   Widget _dishPh() => Container(
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     color: AppColors.gray100,
     child: const Icon(Icons.restaurant, size: 22, color: AppColors.gray300),
   );
 
   Future<void> _showDetail(Order order) async {
     List<OrderItem> items = [];
-    List<Dish> allDishes = [];
     List<Dish> availDishes = [];
     Map<int, String> dishNames = {};
     Map<int, String> dishImages = {};
+    Map<int, List<DishIngredient>> ingMap = {};
+    Map<int, Inventory> invMap = {};
     bool loadingDetail = true;
     String? detailErr;
 
-    String _imgUrl(String? url) {
+    String imgUrl(String? url) {
       if (url == null || url.isEmpty) return '';
       if (url.startsWith('http')) return url;
       return 'http://10.0.2.2:3000$url';
     }
 
-    await showDialog(
+    await showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setS) {
           if (loadingDetail) {
@@ -636,18 +1075,15 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       (results[1].data['data'] ?? results[1].data) as List;
                   final List rawInv =
                       (results[2].data['data'] ?? results[2].data) as List;
-
                   final dishes = rawDishes
                       .map((e) => Dish.fromJson(e as Map<String, dynamic>))
                       .where((d) => !d.isDeleted)
                       .toList();
-
-                  final invMap = <int, Inventory>{};
+                  final iMap = <int, Inventory>{};
                   for (final e in rawInv) {
                     final inv = Inventory.fromJson(e as Map<String, dynamic>);
-                    if (!inv.isDeleted) invMap[_id(inv.id)] = inv;
+                    if (!inv.isDeleted) iMap[_id(inv.id)] = inv;
                   }
-
                   final ingResults = await Future.wait(
                     dishes.map(
                       (d) => _ingApi
@@ -672,24 +1108,20 @@ class _OrdersScreenState extends State<OrdersScreen> {
                           ),
                     ),
                   );
-                  final ingMap = Map<int, List<DishIngredient>>.fromEntries(
+                  final gMap = Map<int, List<DishIngredient>>.fromEntries(
                     ingResults,
                   );
-
                   final avail = dishes
-                      .where(
-                        (d) => calcDishAvailable(_id(d.id), ingMap, invMap),
-                      )
+                      .where((d) => calcDishAvailable(_id(d.id), gMap, iMap))
                       .toList();
-
                   for (final d in dishes) {
                     dishNames[_id(d.id)] = d.name;
                     dishImages[_id(d.id)] = d.imageUrl ?? '';
                   }
-
                   setS(() {
-                    allDishes = dishes;
                     availDishes = avail;
+                    ingMap = gMap;
+                    invMap = iMap;
                     items = rawItems
                         .map(
                           (e) => OrderItem.fromJson(e as Map<String, dynamic>),
@@ -720,260 +1152,688 @@ class _OrdersScreenState extends State<OrdersScreen> {
             _load();
           }
 
-          return AlertDialog(
-            title: Text('Đơn #${order.id} – Bàn ${order.tableNumber}'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: loadingDetail
-                  ? const SizedBox(
-                      height: 80,
-                      child: Center(child: CircularProgressIndicator()),
-                    )
-                  : detailErr != null
-                  ? Text(detailErr!, style: const TextStyle(color: Colors.red))
-                  : SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
+          final screenH = MediaQuery.of(ctx).size.height;
+          final isPending = order.status == 'pending';
+
+          return Container(
+            height: screenH * 0.92,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 10, bottom: 4),
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.gray300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
+                  child: Row(
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          Text(
+                            'Đơn #${order.id}',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.gray900,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
                           Row(
                             children: [
                               _statusBadge(order.status),
-                              const Spacer(),
+                              const SizedBox(width: 8),
                               Text(
-                                _fmtVnd(total),
+                                'Bàn ${order.tableNumber}',
                                 style: const TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 16,
-                                  color: AppColors.primary600,
+                                  fontSize: 13,
+                                  color: AppColors.gray600,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
-                          const Divider(height: 1),
-                          const SizedBox(height: 8),
+                        ],
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: AppColors.gray600),
+                        onPressed: () => Navigator.pop(ctx),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                ),
 
-                          if (items.isEmpty)
-                            const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 12),
-                              child: Text(
-                                'Chưa có món nào',
-                                style: TextStyle(color: AppColors.gray600),
-                              ),
-                            )
-                          else
-                            ...items.map((it) {
-                              final imgUrl = _imgUrl(dishImages[it.dishId]);
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: Row(
-                                  children: [
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(6),
-                                      child: imgUrl.isNotEmpty
-                                          ? Image.network(
-                                              imgUrl,
-                                              width: 40,
-                                              height: 40,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (_, __, ___) =>
-                                                  _miniPh(),
-                                            )
-                                          : _miniPh(),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            dishNames[it.dishId] ??
-                                                'Món #${it.dishId}',
-                                            style: const TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w500,
-                                              color: AppColors.gray900,
-                                            ),
-                                          ),
-                                          Text(
-                                            _fmtVnd(it.price),
-                                            style: const TextStyle(
-                                              fontSize: 11,
-                                              color: AppColors.gray600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    if (order.status == 'pending') ...[
-                                      _qtyBtn(Icons.remove, () async {
-                                        if (it.quantity <= 1) {
-                                          await _itemsApi.delete(_id(it.id));
-                                        } else {
-                                          await _itemsApi.update(_id(it.id), {
-                                            'quantity': it.quantity - 1,
-                                          });
-                                        }
-                                        await reloadItems();
-                                      }),
-                                    ],
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                      ),
-                                      child: Text(
-                                        'x${it.quantity}',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.gray900,
-                                        ),
-                                      ),
-                                    ),
-                                    if (order.status == 'pending') ...[
-                                      _qtyBtn(Icons.add, () async {
-                                        await _itemsApi.update(_id(it.id), {
-                                          'quantity': it.quantity + 1,
-                                        });
-                                        await reloadItems();
-                                      }),
-                                      const SizedBox(width: 4),
-                                      InkWell(
-                                        onTap: () async {
-                                          await _itemsApi.delete(_id(it.id));
-                                          await reloadItems();
-                                        },
-                                        child: const Icon(
-                                          Icons.delete_outline,
-                                          color: Colors.red,
-                                          size: 18,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 4),
-                                    ],
-                                    Text(
-                                      _fmtVnd(it.price * it.quantity),
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.gray900,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
+                const Divider(height: 1, thickness: 0.5),
 
-                          if (order.status == 'pending' &&
-                              availDishes.isNotEmpty) ...[
-                            const SizedBox(height: 8),
-                            const Divider(height: 1),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Thêm món (${availDishes.length} có sẵn):',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.gray700,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            SizedBox(
-                              height: 180,
-                              child: ListView.builder(
-                                itemCount: availDishes.length,
-                                itemBuilder: (_, i) {
-                                  final d = availDishes[i];
-                                  final dishId = _id(d.id);
-                                  final url = _imgUrl(d.imageUrl);
-                                  return ListTile(
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 0,
-                                      vertical: 2,
+                Expanded(
+                  child: loadingDetail
+                      ? const Center(child: CircularProgressIndicator())
+                      : detailErr != null
+                      ? Center(
+                          child: Text(
+                            detailErr!,
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                        )
+                      : Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              flex: 5,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      16,
+                                      10,
+                                      16,
+                                      6,
                                     ),
-                                    leading: ClipRRect(
-                                      borderRadius: BorderRadius.circular(6),
-                                      child: url.isNotEmpty
-                                          ? Image.network(
-                                              url,
-                                              width: 44,
-                                              height: 44,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (_, __, ___) =>
-                                                  _dishPh(),
-                                            )
-                                          : _dishPh(),
-                                    ),
-                                    title: Text(
-                                      d.name,
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w500,
-                                        color: AppColors.gray900,
-                                      ),
-                                    ),
-                                    subtitle: Text(
-                                      _fmtVnd(d.price),
+                                    child: Text(
+                                      isPending
+                                          ? 'Thực đơn (${availDishes.length})'
+                                          : 'Thực đơn',
                                       style: const TextStyle(
                                         fontSize: 12,
-                                        color: AppColors.primary600,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.gray600,
                                       ),
                                     ),
-                                    trailing: IconButton(
-                                      icon: const Icon(
-                                        Icons.add_circle,
-                                        color: AppColors.green700,
-                                        size: 22,
-                                      ),
-                                      onPressed: () async {
-                                        final existing = items
-                                            .where((it) => it.dishId == dishId)
-                                            .firstOrNull;
-                                        if (existing != null) {
-                                          await _itemsApi.update(
-                                            _id(existing.id),
-                                            {'quantity': existing.quantity + 1},
-                                          );
-                                        } else {
-                                          await _itemsApi.create({
-                                            'order_id': _id(order.id),
-                                            'dish_id': dishId,
-                                            'quantity': 1,
-                                            'price': d.price,
-                                          });
-                                        }
-                                        await reloadItems();
-                                      },
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(
-                                        minWidth: 32,
-                                        minHeight: 32,
-                                      ),
+                                  ),
+                                  Expanded(
+                                    child: availDishes.isEmpty
+                                        ? const Center(
+                                            child: Text(
+                                              'Không có món',
+                                              style: TextStyle(
+                                                color: AppColors.gray600,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          )
+                                        : ListView.builder(
+                                            padding: const EdgeInsets.fromLTRB(
+                                              10,
+                                              0,
+                                              6,
+                                              80,
+                                            ),
+                                            itemCount: availDishes.length,
+                                            itemBuilder: (_, i) {
+                                              final d = availDishes[i];
+                                              final dishId = _id(d.id);
+                                              final url = imgUrl(d.imageUrl);
+                                              final existingQty = items
+                                                  .where(
+                                                    (it) => it.dishId == dishId,
+                                                  )
+                                                  .fold(
+                                                    0,
+                                                    (s, it) => s + it.quantity,
+                                                  );
+                                              final inOrder = existingQty > 0;
+
+                                              return GestureDetector(
+                                                onTap: isPending
+                                                    ? () async {
+                                                        final err =
+                                                            _checkIngredientForExistingOrder(
+                                                              dishId: dishId,
+                                                              addQty: 1,
+                                                              existingItems:
+                                                                  items,
+                                                              ingMap: ingMap,
+                                                              invMap: invMap,
+                                                            );
+                                                        if (err != null) {
+                                                          _showIngredientError(
+                                                            ctx,
+                                                            err,
+                                                          );
+                                                          return;
+                                                        }
+                                                        final existing = items
+                                                            .where(
+                                                              (it) =>
+                                                                  it.dishId ==
+                                                                  dishId,
+                                                            )
+                                                            .firstOrNull;
+                                                        if (existing != null) {
+                                                          await _itemsApi.update(
+                                                            _id(existing.id),
+                                                            {
+                                                              'quantity':
+                                                                  existing
+                                                                      .quantity +
+                                                                  1,
+                                                            },
+                                                          );
+                                                        } else {
+                                                          await _itemsApi
+                                                              .create({
+                                                                'order_id': _id(
+                                                                  order.id,
+                                                                ),
+                                                                'dish_id':
+                                                                    dishId,
+                                                                'quantity': 1,
+                                                                'price':
+                                                                    d.price,
+                                                              });
+                                                        }
+                                                        await reloadItems();
+                                                      }
+                                                    : null,
+                                                child: Container(
+                                                  margin: const EdgeInsets.only(
+                                                    bottom: 6,
+                                                  ),
+                                                  padding: const EdgeInsets.all(
+                                                    8,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: inOrder
+                                                        ? AppColors.primary600
+                                                              .withOpacity(0.06)
+                                                        : Colors.white,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          10,
+                                                        ),
+                                                    border: Border.all(
+                                                      color: inOrder
+                                                          ? AppColors.primary600
+                                                                .withOpacity(
+                                                                  0.3,
+                                                                )
+                                                          : AppColors.gray300,
+                                                      width: inOrder
+                                                          ? 1.5
+                                                          : 0.5,
+                                                    ),
+                                                  ),
+                                                  child: Row(
+                                                    children: [
+                                                      ClipRRect(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              7,
+                                                            ),
+                                                        child: url.isNotEmpty
+                                                            ? Image.network(
+                                                                url,
+                                                                width: 42,
+                                                                height: 42,
+                                                                fit: BoxFit
+                                                                    .cover,
+                                                                errorBuilder:
+                                                                    (
+                                                                      _,
+                                                                      __,
+                                                                      ___,
+                                                                    ) =>
+                                                                        _dishPh42(),
+                                                              )
+                                                            : _dishPh42(),
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                      Expanded(
+                                                        child: Column(
+                                                          crossAxisAlignment:
+                                                              CrossAxisAlignment
+                                                                  .start,
+                                                          children: [
+                                                            Text(
+                                                              d.name,
+                                                              style: TextStyle(
+                                                                fontSize: 12,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600,
+                                                                color: inOrder
+                                                                    ? AppColors
+                                                                          .primary600
+                                                                    : AppColors
+                                                                          .gray900,
+                                                              ),
+                                                              maxLines: 1,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                            ),
+                                                            Text(
+                                                              _fmtVnd(d.price),
+                                                              style: const TextStyle(
+                                                                fontSize: 11,
+                                                                color: AppColors
+                                                                    .gray600,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                      if (inOrder)
+                                                        Container(
+                                                          width: 22,
+                                                          height: 22,
+                                                          decoration:
+                                                              const BoxDecoration(
+                                                                color: AppColors
+                                                                    .primary600,
+                                                                shape: BoxShape
+                                                                    .circle,
+                                                              ),
+                                                          child: Center(
+                                                            child: Text(
+                                                              '$existingQty',
+                                                              style: const TextStyle(
+                                                                color: Colors
+                                                                    .white,
+                                                                fontSize: 11,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w700,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        )
+                                                      else if (isPending)
+                                                        const Icon(
+                                                          Icons
+                                                              .add_circle_outline,
+                                                          color:
+                                                              AppColors.gray300,
+                                                          size: 18,
+                                                        ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            Container(width: 0.5, color: AppColors.gray300),
+
+                            Expanded(
+                              flex: 4,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                      10,
+                                      10,
+                                      10,
+                                      6,
                                     ),
-                                  );
-                                },
+                                    child: Row(
+                                      children: [
+                                        const Text(
+                                          'Đã chọn',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.gray600,
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        Text(
+                                          _fmtVnd(total),
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.primary600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: items.isEmpty
+                                        ? Center(
+                                            child: Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: const [
+                                                Icon(
+                                                  Icons.shopping_cart_outlined,
+                                                  size: 32,
+                                                  color: AppColors.gray300,
+                                                ),
+                                                SizedBox(height: 6),
+                                                Text(
+                                                  'Chưa có\nmón nào',
+                                                  textAlign: TextAlign.center,
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: AppColors.gray600,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          )
+                                        : ListView(
+                                            padding: const EdgeInsets.fromLTRB(
+                                              10,
+                                              0,
+                                              10,
+                                              8,
+                                            ),
+                                            children: items.map((it) {
+                                              final url = imgUrl(
+                                                dishImages[it.dishId],
+                                              );
+                                              return Container(
+                                                margin: const EdgeInsets.only(
+                                                  bottom: 6,
+                                                ),
+                                                padding: const EdgeInsets.all(
+                                                  7,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.gray50,
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                  border: Border.all(
+                                                    color: AppColors.primary600
+                                                        .withOpacity(0.15),
+                                                  ),
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    ClipRRect(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            6,
+                                                          ),
+                                                      child: url.isNotEmpty
+                                                          ? Image.network(
+                                                              url,
+                                                              width: 36,
+                                                              height: 36,
+                                                              fit: BoxFit.cover,
+                                                              errorBuilder:
+                                                                  (
+                                                                    _,
+                                                                    __,
+                                                                    ___,
+                                                                  ) =>
+                                                                      _cartImgPh(),
+                                                            )
+                                                          : _cartImgPh(),
+                                                    ),
+                                                    const SizedBox(width: 6),
+                                                    Expanded(
+                                                      child: Column(
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        children: [
+                                                          Text(
+                                                            dishNames[it
+                                                                    .dishId] ??
+                                                                'Món #${it.dishId}',
+                                                            style:
+                                                                const TextStyle(
+                                                                  fontSize: 11,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w600,
+                                                                  color: AppColors
+                                                                      .gray900,
+                                                                ),
+                                                            maxLines: 1,
+                                                            overflow:
+                                                                TextOverflow
+                                                                    .ellipsis,
+                                                          ),
+                                                          Text(
+                                                            _fmtVnd(
+                                                              it.price *
+                                                                  it.quantity,
+                                                            ),
+                                                            style: const TextStyle(
+                                                              fontSize: 10,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                              color: AppColors
+                                                                  .primary600,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    if (isPending) ...[
+                                                      _circleBtn(
+                                                        Icons.remove,
+                                                        () async {
+                                                          if (it.quantity <=
+                                                              1) {
+                                                            await _itemsApi
+                                                                .delete(
+                                                                  _id(it.id),
+                                                                );
+                                                          } else {
+                                                            await _itemsApi.update(
+                                                              _id(it.id),
+                                                              {
+                                                                'quantity':
+                                                                    it.quantity -
+                                                                    1,
+                                                              },
+                                                            );
+                                                          }
+                                                          await reloadItems();
+                                                        },
+                                                      ),
+                                                      Padding(
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 5,
+                                                            ),
+                                                        child: Text(
+                                                          '${it.quantity}',
+                                                          style:
+                                                              const TextStyle(
+                                                                fontSize: 12,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w700,
+                                                                color: AppColors
+                                                                    .gray900,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                      _circleBtn(
+                                                        Icons.add,
+                                                        () async {
+                                                          final err =
+                                                              _checkIngredientForExistingOrder(
+                                                                dishId:
+                                                                    it.dishId,
+                                                                addQty: 1,
+                                                                existingItems:
+                                                                    items,
+                                                                ingMap: ingMap,
+                                                                invMap: invMap,
+                                                              );
+                                                          if (err != null) {
+                                                            _showIngredientError(
+                                                              ctx,
+                                                              err,
+                                                            );
+                                                            return;
+                                                          }
+                                                          await _itemsApi.update(
+                                                            _id(it.id),
+                                                            {
+                                                              'quantity':
+                                                                  it.quantity +
+                                                                  1,
+                                                            },
+                                                          );
+                                                          await reloadItems();
+                                                        },
+                                                      ),
+                                                    ] else
+                                                      Padding(
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 4,
+                                                            ),
+                                                        child: Text(
+                                                          'x${it.quantity}',
+                                                          style:
+                                                              const TextStyle(
+                                                                fontSize: 12,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w700,
+                                                                color: AppColors
+                                                                    .gray700,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                  ],
+                                                ),
+                                              );
+                                            }).toList(),
+                                          ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
-                        ],
-                      ),
+                        ),
+                ),
+
+                Container(
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    10,
+                    16,
+                    MediaQuery.of(ctx).padding.bottom + 10,
+                  ),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    border: Border(
+                      top: BorderSide(color: AppColors.gray300, width: 0.5),
                     ),
+                  ),
+                  child: isPending
+                      ? Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () async {
+                                  Navigator.pop(ctx);
+                                  await _updateStatus(order, 'canceled');
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppColors.red700,
+                                  side: BorderSide(
+                                    color: AppColors.red700.withOpacity(0.4),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Hủy đơn',
+                                  style: TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              flex: 2,
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  Navigator.pop(ctx);
+                                  await _updateStatus(order, 'completed');
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.green700,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 0,
+                                ),
+                                child: Text(
+                                  'Hoàn thành  •  ${_fmtVnd(total)}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      : SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              'Đóng',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ),
+                ),
+              ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Đóng'),
-              ),
-            ],
           );
         },
       ),
     );
   }
 
-  Widget _qtyBtn(IconData icon, VoidCallback onTap) => InkWell(
+  Widget _detailQtyBtn(IconData icon, VoidCallback onTap) => GestureDetector(
     onTap: onTap,
-    child: Icon(icon, size: 18, color: AppColors.gray600),
+    child: Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        color: AppColors.gray100,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Icon(icon, size: 15, color: AppColors.gray700),
+    ),
   );
 
   Widget _statusBadge(String status) {
@@ -1014,45 +1874,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
       ),
     );
   }
-
-  Widget _errBox(String msg) => Container(
-    margin: const EdgeInsets.only(bottom: 12),
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: AppColors.red50,
-      borderRadius: BorderRadius.circular(6),
-      border: Border.all(color: Colors.red.shade200),
-    ),
-    child: Text(msg, style: TextStyle(fontSize: 14, color: AppColors.red700)),
-  );
-
-  InputDecoration _inputDeco(String hint) => InputDecoration(
-    hintText: hint,
-    hintStyle: const TextStyle(color: AppColors.gray300),
-    filled: true,
-    fillColor: Colors.white,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(6),
-      borderSide: const BorderSide(color: AppColors.gray300),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(6),
-      borderSide: const BorderSide(color: AppColors.gray300),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(6),
-      borderSide: const BorderSide(color: AppColors.primary500, width: 2),
-    ),
-    errorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(6),
-      borderSide: const BorderSide(color: Colors.red),
-    ),
-    focusedErrorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(6),
-      borderSide: const BorderSide(color: Colors.red, width: 2),
-    ),
-  );
 
   @override
   Widget build(BuildContext context) {
@@ -1172,9 +1993,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                           if (picked != null) {
                             setState(
                               () => _filterDate =
-                                  '${picked.year}-'
-                                  '${picked.month.toString().padLeft(2, '0')}-'
-                                  '${picked.day.toString().padLeft(2, '0')}',
+                                  '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}',
                             );
                             _load();
                           }
@@ -1275,7 +2094,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
         ),
       );
     }
-
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView.separated(

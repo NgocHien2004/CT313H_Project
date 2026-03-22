@@ -337,9 +337,6 @@ class _InventoryScreenState extends State<InventoryScreen>
                     placeholder: 'Nhập ghi chú...',
                     controller: noteCtrl,
                     maxLines: 2,
-                    validator: (v) => (v == null || v.isEmpty)
-                        ? 'Vui lòng nhập ghi chú'
-                        : null,
                   ),
                 ],
               ),
