@@ -14,6 +14,7 @@ import '../../models/dish_ingredient.dart';
 import '../../models/inventory.dart';
 import 'package:restaurant_app/ui/dishes/dishes_screen.dart'
     show calcDishAvailable;
+import '../../services/notification_service.dart';
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
@@ -98,6 +99,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
     try {
       await _ordersApi.update(_id(order.id), {'status': status});
       _load();
+      if (status == 'completed') {
+        await _checkLowStockAfterComplete();
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -108,6 +112,24 @@ class _OrdersScreenState extends State<OrdersScreen> {
         );
       }
     }
+  }
+
+  Future<void> _checkLowStockAfterComplete() async {
+    try {
+      final role = await _storage.read(key: 'user_role');
+      if (role != 'admin') return;
+
+      final res = await _invApi.getAll(params: {'limit': 500});
+      final List raw = (res.data['data'] ?? res.data) as List;
+      final inventoryList = raw
+          .map((e) => Inventory.fromJson(e as Map<String, dynamic>))
+          .toList();
+
+      await NotificationService().checkAndNotifyLowStock(
+        inventoryList: inventoryList,
+        isAdmin: true,
+      );
+    } catch (_) {}
   }
 
   Future<void> _delete(Order order) async {

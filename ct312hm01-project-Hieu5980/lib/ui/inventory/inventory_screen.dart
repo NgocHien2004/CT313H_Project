@@ -3,8 +3,10 @@ import 'package:dio/dio.dart';
 import '../../Themes/app_colors.dart';
 import '../../services/api/inventory_api.dart';
 import '../../services/api/inventory_logs_api.dart';
+import '../../services/notification_service.dart';
 import '../../models/inventory.dart';
 import '../../models/inventory_log.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
@@ -17,6 +19,7 @@ class _InventoryScreenState extends State<InventoryScreen>
     with SingleTickerProviderStateMixin {
   final _invApi = InventoryAPI();
   final _logsApi = InventoryLogsAPI();
+  final _storage = const FlutterSecureStorage();
   late TabController _tabCtrl;
 
   List<Inventory> _items = [];
@@ -50,6 +53,18 @@ class _InventoryScreenState extends State<InventoryScreen>
     super.dispose();
   }
 
+  /// Sau khi load xong inventory, kiểm tra và notify admin nếu có mặt hàng thấp
+  Future<void> _checkLowStock() async {
+    try {
+      final role = await _storage.read(key: 'user_role');
+      if (role != 'admin') return;
+      await NotificationService().checkAndNotifyLowStock(
+        inventoryList: _items,
+        isAdmin: true,
+      );
+    } catch (_) {}
+  }
+
   Future<void> _loadItems() async {
     setState(() => _loadingItems = true);
     try {
@@ -62,6 +77,8 @@ class _InventoryScreenState extends State<InventoryScreen>
             .toList();
         _loadingItems = false;
       });
+      // Kiểm tra tồn kho thấp sau mỗi lần load
+      await _checkLowStock();
     } catch (_) {
       setState(() => _loadingItems = false);
     }
@@ -200,7 +217,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                           await _invApi.update(_id(item.id), data);
                         }
                         if (ctx.mounted) Navigator.pop(ctx);
-                        _loadItems();
+                        _loadItems(); // _loadItems sẽ tự gọi _checkLowStock
                       } on DioException catch (e) {
                         setS(
                           () => formErr =
@@ -306,8 +323,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'Tồn kho hiện tại: ${preSelected.quantity} '
-                            '${preSelected.unit ?? ''}',
+                            'Tồn kho hiện tại: ${preSelected.quantity} ${preSelected.unit ?? ''}',
                             style: const TextStyle(
                               fontSize: 13,
                               color: AppColors.gray700,
@@ -372,7 +388,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                           });
                         }
                         if (ctx.mounted) Navigator.pop(ctx);
-                        _loadItems();
+                        _loadItems(); // sẽ tự check low stock
                         if (_tabCtrl.index == 1) _loadLogs();
                       } on DioException catch (e) {
                         setS(
@@ -412,8 +428,7 @@ class _InventoryScreenState extends State<InventoryScreen>
       builder: (ctx) => AlertDialog(
         title: const Text('Xác nhận xóa'),
         content: Text(
-          'Bạn có chắc muốn xóa "${item.name}"?\n'
-          'Hành động này không thể hoàn tác.',
+          'Bạn có chắc muốn xóa "${item.name}"?\nHành động này không thể hoàn tác.',
         ),
         actions: [
           TextButton(
@@ -592,6 +607,7 @@ class _InventoryScreenState extends State<InventoryScreen>
       body: TabBarView(
         controller: _tabCtrl,
         children: [
+          // Tab 1: Nguyên liệu
           _loadingItems
               ? const Center(child: CircularProgressIndicator())
               : _items.isEmpty
@@ -650,8 +666,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      '${item.quantity} ${item.unit ?? ''}  '
-                                      '(min: ${item.minQuantity})',
+                                      '${item.quantity} ${item.unit ?? ''}  (min: ${item.minQuantity})',
                                       style: TextStyle(
                                         fontSize: 12,
                                         color: isLow
@@ -718,6 +733,7 @@ class _InventoryScreenState extends State<InventoryScreen>
                   ),
                 ),
 
+          // Tab 2: Lịch sử
           _loadingLogs
               ? const Center(child: CircularProgressIndicator())
               : _logs.isEmpty

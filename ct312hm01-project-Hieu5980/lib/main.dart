@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'routes/app_routes.dart';
+import 'services/notification_service.dart';
 
 final RouteObserver<ModalRoute<void>> routeObserver =
     RouteObserver<ModalRoute<void>>();
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  final notif = NotificationService();
+  await notif.init();
+  await notif.requestPermission();
+
   runApp(const MyApp());
 }
 
