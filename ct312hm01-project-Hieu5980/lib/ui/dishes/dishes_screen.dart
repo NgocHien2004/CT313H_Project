@@ -13,16 +13,13 @@ import '../../models/category.dart';
 import '../../models/dish_ingredient.dart';
 import '../../models/inventory.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helper: tính availability thực tế dựa trên nguyên liệu
-// ─────────────────────────────────────────────────────────────────────────────
 bool calcDishAvailable(
   int dishId,
   Map<int, List<DishIngredient>> ingredientMap,
   Map<int, Inventory> inventoryMap,
 ) {
   final ings = ingredientMap[dishId];
-  if (ings == null || ings.isEmpty) return true; // không có CT → coi là có sẵn
+  if (ings == null || ings.isEmpty) return true;
   for (final ing in ings) {
     final inv = inventoryMap[ing.inventoryId];
     if (inv == null || inv.quantity < ing.quantityRequired) return false;
@@ -30,9 +27,6 @@ bool calcDishAvailable(
   return true;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// DishesScreen
-// ─────────────────────────────────────────────────────────────────────────────
 class DishesScreen extends StatefulWidget {
   const DishesScreen({super.key});
   @override
@@ -46,7 +40,7 @@ class _DishesScreenState extends State<DishesScreen> {
   final _invApi = InventoryAPI();
   final _storage = const FlutterSecureStorage();
 
-  List<Dish> _allDishes = []; // tất cả dishes, không phân trang server
+  List<Dish> _allDishes = [];
   List<Category> _categories = [];
   Map<int, List<DishIngredient>> _ingMap = {};
   Map<int, Inventory> _invMap = {};
@@ -55,13 +49,13 @@ class _DishesScreenState extends State<DishesScreen> {
   bool _isAdmin = false;
   String? _error;
 
-  // ── Client-side filter + pagination ──────────────────────────────────────
   int _page = 1;
   final int _limit = 12;
 
+  String _searchText = '';
   final _searchCtrl = TextEditingController();
   String _filterCatId = '';
-  String _filterAvailable = ''; // '' | 'true' | 'false'
+  String _filterAvailable = '';
 
   int _id(String? id) => int.tryParse(id ?? '') ?? 0;
 
@@ -75,10 +69,9 @@ class _DishesScreenState extends State<DishesScreen> {
     return '${b}đ';
   }
 
-  // Filter theo search + category + availability (client-side)
   List<Dish> get _filtered {
     var list = _allDishes;
-    final q = _searchCtrl.text.trim().toLowerCase();
+    final q = _searchText.trim().toLowerCase();
     if (q.isNotEmpty) {
       list = list
           .where(
@@ -109,8 +102,18 @@ class _DishesScreenState extends State<DishesScreen> {
   int get _totalFiltered => _filtered.length;
   int get _totalPages => (_totalFiltered / _limit).ceil().clamp(1, 999);
 
-  // Search không gọi API, chỉ filter client
-  void _onSearchChanged(String _) => setState(() => _page = 1);
+  void _onSearchChanged(String value) => setState(() {
+    _searchText = value;
+    _page = 1;
+  });
+  void _onCategoryChanged(String? value) => setState(() {
+    _filterCatId = value ?? '';
+    _page = 1;
+  });
+  void _onAvailableChanged(String? value) => setState(() {
+    _filterAvailable = value ?? '';
+    _page = 1;
+  });
 
   @override
   void initState() {
@@ -146,7 +149,6 @@ class _DishesScreenState extends State<DishesScreen> {
     } catch (_) {}
   }
 
-  // Load TẤT CẢ dishes + inventory + ingredients 1 lần
   Future<void> _load() async {
     setState(() {
       _isLoading = true;
@@ -290,7 +292,7 @@ class _DishesScreenState extends State<DishesScreen> {
           : null,
       body: Column(
         children: [
-          // ── Filter bar ──────────────────────────────────────────────────────
+          // ── Filter bar ──────────────────────────────────────────────────
           Container(
             color: Colors.white,
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
@@ -312,6 +314,24 @@ class _DishesScreenState extends State<DishesScreen> {
                         size: 18,
                         color: AppColors.gray600,
                       ),
+                      suffixIcon: _searchText.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(
+                                Icons.clear,
+                                size: 16,
+                                color: AppColors.gray600,
+                              ),
+                              onPressed: () {
+                                _searchCtrl.clear();
+                                _onSearchChanged('');
+                              },
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(
+                                minWidth: 32,
+                                minHeight: 32,
+                              ),
+                            )
+                          : null,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(6),
@@ -362,10 +382,7 @@ class _DishesScreenState extends State<DishesScreen> {
                             ),
                           ),
                         ],
-                        onChanged: (v) => setState(() {
-                          _filterCatId = v ?? '';
-                          _page = 1;
-                        }),
+                        onChanged: _onCategoryChanged,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -392,10 +409,7 @@ class _DishesScreenState extends State<DishesScreen> {
                             child: Text('Thiếu NL'),
                           ),
                         ],
-                        onChanged: (v) => setState(() {
-                          _filterAvailable = v ?? '';
-                          _page = 1;
-                        }),
+                        onChanged: _onAvailableChanged,
                       ),
                     ),
                   ],
@@ -406,7 +420,7 @@ class _DishesScreenState extends State<DishesScreen> {
 
           Expanded(child: _buildGrid(displayed)),
 
-          // ── Pagination (client-side) ─────────────────────────────────────────
+          // ── Pagination ──────────────────────────────────────────────────
           if (!_isLoading && _totalFiltered > _limit)
             Container(
               color: Colors.white,
@@ -457,15 +471,23 @@ class _DishesScreenState extends State<DishesScreen> {
       );
     }
     if (dishes.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.restaurant_menu, size: 64, color: AppColors.gray300),
-            SizedBox(height: 12),
+            const Icon(
+              Icons.restaurant_menu,
+              size: 64,
+              color: AppColors.gray300,
+            ),
+            const SizedBox(height: 12),
             Text(
-              'Không có món ăn nào',
-              style: TextStyle(
+              _searchText.isNotEmpty ||
+                      _filterCatId.isNotEmpty ||
+                      _filterAvailable.isNotEmpty
+                  ? 'Không tìm thấy món ăn phù hợp'
+                  : 'Không có món ăn nào',
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: AppColors.gray700,
@@ -480,9 +502,10 @@ class _DishesScreenState extends State<DishesScreen> {
       onRefresh: _load,
       child: GridView.builder(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 0.68,
+          // Chiều cao đủ cho cả nút admin, non-admin dùng ít hơn nhưng ok
+          mainAxisExtent: _isAdmin ? 290.0 : 250.0,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
         ),
@@ -492,7 +515,6 @@ class _DishesScreenState extends State<DishesScreen> {
           final url = _imgUrl(dish.imageUrl);
           final available = _isAvailable(dish);
           final ings = _ingMap[_id(dish.id)] ?? [];
-          // Tìm nguyên liệu thiếu
           final missing = ings.where((ing) {
             final inv = _invMap[ing.inventoryId];
             return inv == null || inv.quantity < ing.quantityRequired;
@@ -510,7 +532,7 @@ class _DishesScreenState extends State<DishesScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── Ảnh ─────────────────────────────────────────────────────
+                // ── Ảnh (chiều cao cố định 110) ─────────────────────────
                 Stack(
                   children: [
                     ClipRRect(
@@ -564,13 +586,12 @@ class _DishesScreenState extends State<DishesScreen> {
                   ],
                 ),
 
-                // ── Info ─────────────────────────────────────────────────────
+                // ── Info (Expanded fill phần còn lại) ───────────────────
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.start,
                       children: [
                         Text(
                           dish.name,
@@ -581,7 +602,7 @@ class _DishesScreenState extends State<DishesScreen> {
                                 ? AppColors.gray900
                                 : AppColors.gray400,
                           ),
-                          maxLines: 2,
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 2),
@@ -603,44 +624,42 @@ class _DishesScreenState extends State<DishesScreen> {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        // Badge trạng thái
-                        available
-                            ? _badge(
-                                'Có sẵn',
-                                AppColors.green50,
-                                AppColors.green700,
-                              )
-                            : Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _badge(
-                                    'Thiếu nguyên liệu',
-                                    const Color(0xFFFFF7ED),
-                                    Colors.orange.shade700,
-                                  ),
-                                  if (missing.isNotEmpty) ...[
-                                    const SizedBox(height: 3),
-                                    Text(
-                                      missing
-                                          .map((ing) {
-                                            final inv =
-                                                _invMap[ing.inventoryId];
-                                            return '${inv?.name ?? '?'}: '
-                                                '${inv?.quantity ?? 0}/'
-                                                '${ing.quantityRequired.toStringAsFixed(0)}';
-                                          })
-                                          .join(', '),
-                                      style: const TextStyle(
-                                        fontSize: 9,
-                                        color: AppColors.gray600,
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                ],
+                        if (available)
+                          _badge(
+                            'Có sẵn',
+                            AppColors.green50,
+                            AppColors.green700,
+                          )
+                        else ...[
+                          _badge(
+                            'Thiếu NL',
+                            const Color(0xFFFFF7ED),
+                            Colors.orange.shade700,
+                          ),
+                          if (missing.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              missing
+                                  .map((ing) {
+                                    final inv = _invMap[ing.inventoryId];
+                                    return '${inv?.name ?? '?'}: '
+                                        '${inv?.quantity ?? 0}/'
+                                        '${ing.quantityRequired.toStringAsFixed(0)}';
+                                  })
+                                  .join(', '),
+                              style: const TextStyle(
+                                fontSize: 9,
+                                color: AppColors.gray600,
                               ),
-                        const SizedBox(height: 6),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ],
+
+                        // Đẩy nút Sửa/Xóa xuống đáy card
+                        const Spacer(),
+
                         if (_isAdmin)
                           Row(
                             children: [
@@ -649,7 +668,7 @@ class _DishesScreenState extends State<DishesScreen> {
                                   onTap: () => _openForm(dish: dish),
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
-                                      vertical: 5,
+                                      vertical: 6,
                                     ),
                                     decoration: BoxDecoration(
                                       color: AppColors.primary600.withOpacity(
@@ -676,7 +695,7 @@ class _DishesScreenState extends State<DishesScreen> {
                                   onTap: () => _delete(dish),
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
-                                      vertical: 5,
+                                      vertical: 6,
                                     ),
                                     decoration: BoxDecoration(
                                       color: AppColors.red50,
@@ -730,7 +749,7 @@ class _DishesScreenState extends State<DishesScreen> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DishFormScreen — thêm / sửa món ăn (2 tab: thông tin + nguyên liệu)
+// DishFormScreen
 // ─────────────────────────────────────────────────────────────────────────────
 class DishFormScreen extends StatefulWidget {
   final Dish? dish;
@@ -1076,7 +1095,6 @@ class _DishFormScreenState extends State<DishFormScreen>
     }
   }
 
-  // ── helpers ───────────────────────────────────────────────────────────────
   Widget _errBox(String msg) => Container(
     margin: const EdgeInsets.only(bottom: 12),
     padding: const EdgeInsets.all(12),
@@ -1189,7 +1207,7 @@ class _DishFormScreenState extends State<DishFormScreen>
       body: TabBarView(
         controller: _tabCtrl,
         children: [
-          // ── Tab 1: Thông tin ──────────────────────────────────────────────
+          // ── Tab 1: Thông tin ──────────────────────────────────────────
           SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Form(
@@ -1198,8 +1216,6 @@ class _DishFormScreenState extends State<DishFormScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (_error != null) _errBox(_error!),
-
-                  // Ảnh
                   _sectionLabel('Hình ảnh món ăn'),
                   GestureDetector(
                     onTap: _pickImage,
@@ -1239,7 +1255,7 @@ class _DishFormScreenState extends State<DishFormScreen>
                                     onTap: _removeImage,
                                     child: Container(
                                       padding: const EdgeInsets.all(4),
-                                      decoration: BoxDecoration(
+                                      decoration: const BoxDecoration(
                                         color: Colors.black54,
                                         shape: BoxShape.circle,
                                       ),
@@ -1282,8 +1298,6 @@ class _DishFormScreenState extends State<DishFormScreen>
                     ),
                   ),
                   const SizedBox(height: 20),
-
-                  // Tên
                   _sectionLabel('Tên món ăn *'),
                   TextFormField(
                     controller: _nameCtrl,
@@ -1292,8 +1306,6 @@ class _DishFormScreenState extends State<DishFormScreen>
                         (v == null || v.isEmpty) ? 'Vui lòng nhập tên' : null,
                   ),
                   const SizedBox(height: 16),
-
-                  // Mô tả
                   _sectionLabel('Mô tả'),
                   TextFormField(
                     controller: _descCtrl,
@@ -1301,8 +1313,6 @@ class _DishFormScreenState extends State<DishFormScreen>
                     decoration: _inputDeco('Nhập mô tả (tùy chọn)'),
                   ),
                   const SizedBox(height: 16),
-
-                  // Giá
                   _sectionLabel('Giá (VNĐ) *'),
                   TextFormField(
                     controller: _priceCtrl,
@@ -1315,8 +1325,6 @@ class _DishFormScreenState extends State<DishFormScreen>
                     },
                   ),
                   const SizedBox(height: 16),
-
-                  // Danh mục
                   _sectionLabel('Danh mục *'),
                   DropdownButtonFormField<int>(
                     value: _selCatId,
@@ -1338,7 +1346,6 @@ class _DishFormScreenState extends State<DishFormScreen>
                         v == null ? 'Vui lòng chọn danh mục' : null,
                   ),
                   const SizedBox(height: 24),
-
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -1374,7 +1381,7 @@ class _DishFormScreenState extends State<DishFormScreen>
             ),
           ),
 
-          // ── Tab 2: Nguyên liệu ────────────────────────────────────────────
+          // ── Tab 2: Nguyên liệu ────────────────────────────────────────
           !_isEdit
               ? const Center(
                   child: Padding(
@@ -1404,7 +1411,6 @@ class _DishFormScreenState extends State<DishFormScreen>
               ? const Center(child: CircularProgressIndicator())
               : Column(
                   children: [
-                    // Header
                     Container(
                       color: Colors.white,
                       padding: const EdgeInsets.symmetric(
@@ -1477,7 +1483,6 @@ class _DishFormScreenState extends State<DishFormScreen>
                                   sc = AppColors.green700;
                                   sl = 'Đủ ($qty)';
                                 }
-
                                 return Container(
                                   decoration: BoxDecoration(
                                     color: Colors.white,

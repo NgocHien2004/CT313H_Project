@@ -9,7 +9,7 @@ const pagination = require("../middlewares/pagination");
 const validate = require("../middlewares/validate");
 
 // Lấy tất cả món ăn
-router.get("/", pagination(), dishController.getAllDishes);
+router.get("/", pagination(10, 2000), dishController.getAllDishes);
 
 // Lấy món ăn theo ID
 router.get("/:id/detail", dishController.getDishWithIngredientsById);
