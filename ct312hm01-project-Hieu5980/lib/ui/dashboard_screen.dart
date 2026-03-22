@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:go_router/go_router.dart';
 import '../Themes/app_colors.dart';
 import '../services/api/dishes_api.dart';
 import '../services/api/orders_api.dart';
 import '../services/api/reservations_api.dart';
 import '../services/api/user_api.dart';
-import '../routes/app_routes.dart';
 import '../routes/route_names.dart';
-import '../main.dart' show routeObserver;
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -16,7 +15,7 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
+class _DashboardScreenState extends State<DashboardScreen> {
   final _storage = const FlutterSecureStorage();
   final _dishesApi = DishesAPI();
   final _ordersApi = OrdersAPI();
@@ -24,7 +23,6 @@ class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
   final _userApi = UserAPI();
 
   String _userName = '';
-  String _userRole = '';
   bool _isAdmin = false;
 
   int _totalDishes = 0;
@@ -36,41 +34,21 @@ class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
   @override
   void initState() {
     super.initState();
-    _loadUser();
-    _loadStats();
+    _loadUser().then((_) => _loadStats());
   }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    routeObserver.subscribe(this, ModalRoute.of(context)!);
-  }
-
-  @override
-  void dispose() {
-    routeObserver.unsubscribe(this);
-    super.dispose();
-  }
-
-  @override
-  void didPopNext() {
-    _loadStats();
-  }
-
-  @override
-  void didPush() {}
 
   Future<void> _loadUser() async {
     final name = await _storage.read(key: 'user_name');
     final role = await _storage.read(key: 'user_role');
+    if (!mounted) return;
     setState(() {
       _userName = name ?? 'Người dùng';
-      _userRole = role ?? 'user';
       _isAdmin = role == 'admin';
     });
   }
 
   Future<void> _loadStats() async {
+    if (!mounted) return;
     setState(() => _loadingStats = true);
     try {
       final results = await Future.wait([
@@ -95,11 +73,10 @@ class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
       int userTotal = 0;
       if (_isAdmin && results.length > 3) {
         final rawUsers = results[3].data['data'] ?? results[3].data;
-        if (rawUsers is List) {
-          userTotal = rawUsers.length;
-        }
+        if (rawUsers is List) userTotal = rawUsers.length;
       }
 
+      if (!mounted) return;
       setState(() {
         _totalDishes = dishTotal is int
             ? dishTotal
@@ -112,7 +89,7 @@ class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
         _loadingStats = false;
       });
     } catch (_) {
-      setState(() => _loadingStats = false);
+      if (mounted) setState(() => _loadingStats = false);
     }
   }
 
@@ -140,9 +117,7 @@ class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
     );
     if (ok != true) return;
     await _storage.deleteAll();
-    if (mounted) {
-      AppRoutes.navigateAndReplace(context, RouteNames.login);
-    }
+    if (mounted) context.go(RouteNames.login);
   }
 
   @override
@@ -199,7 +174,6 @@ class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
             children: [
               _buildWelcomeCard(),
               const SizedBox(height: 20),
-
               const Text(
                 'Thống kê',
                 style: TextStyle(
@@ -211,7 +185,6 @@ class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
               const SizedBox(height: 12),
               _buildStatsGrid(),
               const SizedBox(height: 24),
-
               const Text(
                 'Quản lý',
                 style: TextStyle(
@@ -264,9 +237,9 @@ class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
+                const Text(
                   'Hệ thống quản lý nhà hàng',
-                  style: const TextStyle(fontSize: 13, color: Colors.white70),
+                  style: TextStyle(fontSize: 13, color: Colors.white70),
                 ),
               ],
             ),
@@ -297,30 +270,25 @@ class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
   Widget _buildStatsGrid() {
     final stats = [
       _StatItem(
-        label: 'Tổng món ăn',
-        value: _totalDishes,
-        icon: Icons.restaurant_menu,
-        color: AppColors.primary,
+        'Tổng món ăn',
+        _totalDishes,
+        Icons.restaurant_menu,
+        AppColors.primary,
       ),
       _StatItem(
-        label: 'Đơn hàng',
-        value: _totalOrders,
-        icon: Icons.receipt_long,
-        color: AppColors.green700,
+        'Đơn hàng',
+        _totalOrders,
+        Icons.receipt_long,
+        AppColors.green700,
       ),
       _StatItem(
-        label: 'Đặt bàn',
-        value: _totalResv,
-        icon: Icons.calendar_today,
-        color: const Color(0xFFF59E0B),
+        'Đặt bàn',
+        _totalResv,
+        Icons.calendar_today,
+        const Color(0xFFF59E0B),
       ),
       if (_isAdmin)
-        _StatItem(
-          label: 'Người dùng',
-          value: _totalUsers,
-          icon: Icons.people,
-          color: AppColors.secondary,
-        ),
+        _StatItem('Người dùng', _totalUsers, Icons.people, AppColors.secondary),
     ];
 
     return GridView.builder(
@@ -397,52 +365,51 @@ class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
   Widget _buildNavMenu() {
     final items = [
       _NavItem(
-        icon: Icons.restaurant_menu,
-        label: 'Món ăn',
-        subtitle: 'Quản lý thực đơn',
-        route: RouteNames.dishes,
-        color: AppColors.primary,
+        Icons.restaurant_menu,
+        'Món ăn',
+        'Quản lý thực đơn',
+        RouteNames.dishes,
+        AppColors.primary,
       ),
       _NavItem(
-        icon: Icons.receipt_long,
-        label: 'Đơn hàng',
-        subtitle: 'Xem & tạo đơn hàng',
-        route: RouteNames.orders,
-        color: AppColors.green700,
+        Icons.receipt_long,
+        'Đơn hàng',
+        'Xem & tạo đơn hàng',
+        RouteNames.orders,
+        AppColors.green700,
       ),
       _NavItem(
-        icon: Icons.calendar_today,
-        label: 'Đặt bàn',
-        subtitle: 'Quản lý đặt bàn',
-        route: RouteNames.reservations,
-        color: const Color(0xFFF59E0B),
+        Icons.calendar_today,
+        'Đặt bàn',
+        'Quản lý đặt bàn',
+        RouteNames.reservations,
+        const Color(0xFFF59E0B),
       ),
       if (_isAdmin) ...[
         _NavItem(
-          icon: Icons.category,
-          label: 'Danh mục',
-          subtitle: 'Phân loại món ăn',
-          route: RouteNames.categories,
-          color: AppColors.secondary,
+          Icons.category,
+          'Danh mục',
+          'Phân loại món ăn',
+          RouteNames.categories,
+          AppColors.secondary,
         ),
         _NavItem(
-          icon: Icons.inventory_2,
-          label: 'Kho hàng',
-          subtitle: 'Nguyên liệu & nhập kho',
-          route: RouteNames.inventory,
-          color: const Color(0xFF0284C7),
+          Icons.inventory_2,
+          'Kho hàng',
+          'Nguyên liệu & nhập kho',
+          RouteNames.inventory,
+          const Color(0xFF0284C7),
         ),
         _NavItem(
-          icon: Icons.people,
-          label: 'Người dùng',
-          subtitle: 'Quản lý tài khoản',
-          route: RouteNames.users,
-          color: AppColors.primary700,
+          Icons.people,
+          'Người dùng',
+          'Quản lý tài khoản',
+          RouteNames.users,
+          AppColors.primary700,
         ),
       ],
     ];
-
-    return Column(children: items.map((item) => _navCard(item)).toList());
+    return Column(children: items.map(_navCard).toList());
   }
 
   Widget _navCard(_NavItem item) {
@@ -477,7 +444,7 @@ class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
           style: const TextStyle(fontSize: 12, color: AppColors.gray600),
         ),
         trailing: const Icon(Icons.chevron_right, color: AppColors.gray400),
-        onTap: () => AppRoutes.navigate(context, item.route),
+        onTap: () => context.push(item.route),
       ),
     );
   }
@@ -488,12 +455,7 @@ class _StatItem {
   final int value;
   final IconData icon;
   final Color color;
-  const _StatItem({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
+  const _StatItem(this.label, this.value, this.icon, this.color);
 }
 
 class _NavItem {
@@ -502,11 +464,5 @@ class _NavItem {
   final String subtitle;
   final String route;
   final Color color;
-  const _NavItem({
-    required this.icon,
-    required this.label,
-    required this.subtitle,
-    required this.route,
-    required this.color,
-  });
+  const _NavItem(this.icon, this.label, this.subtitle, this.route, this.color);
 }
