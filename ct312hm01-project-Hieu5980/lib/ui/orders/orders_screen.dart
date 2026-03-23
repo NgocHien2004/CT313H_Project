@@ -15,6 +15,7 @@ import '../../models/inventory.dart';
 import 'package:restaurant_app/ui/dishes/dishes_screen.dart'
     show calcDishAvailable;
 import '../../services/notification_service.dart';
+import '../../config/app_config.dart';
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
@@ -298,7 +299,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
     String imgUrl(String? url) {
       if (url == null || url.isEmpty) return '';
       if (url.startsWith('http')) return url;
-      return 'http://10.0.2.2:3000$url';
+      final base = AppConfig.apiBaseUrl.replaceAll('/api', '');
+      return '$base$url';
     }
 
     await showModalBottomSheet(
@@ -1052,7 +1054,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
     String imgUrl(String? url) {
       if (url == null || url.isEmpty) return '';
       if (url.startsWith('http')) return url;
-      return 'http://10.0.2.2:3000$url';
+      final base = AppConfig.apiBaseUrl.replaceAll('/api', '');
+      return '$base$url';
     }
 
     await showModalBottomSheet(

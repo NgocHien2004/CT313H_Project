@@ -12,6 +12,7 @@ import '../../models/dish.dart';
 import '../../models/category.dart';
 import '../../models/dish_ingredient.dart';
 import '../../models/inventory.dart';
+import '../../config/app_config.dart';
 
 bool calcDishAvailable(
   Dish dish,
@@ -238,7 +239,8 @@ class _DishesScreenState extends State<DishesScreen> {
   String _imgUrl(String? imageUrl) {
     if (imageUrl == null || imageUrl.isEmpty) return '';
     if (imageUrl.startsWith('http')) return imageUrl;
-    return 'http://10.0.2.2:3000$imageUrl';
+    final base = AppConfig.apiBaseUrl.replaceAll('/api', '');
+    return '$base$imageUrl';
   }
 
   Future<void> _openForm({Dish? dish}) async {
@@ -827,7 +829,7 @@ class _DishFormScreenState extends State<DishFormScreen>
       if (d.imageUrl != null && d.imageUrl!.isNotEmpty) {
         _previewUrl = d.imageUrl!.startsWith('http')
             ? d.imageUrl!
-            : 'http://10.0.2.2:3000${d.imageUrl}';
+            : '${AppConfig.apiBaseUrl.replaceAll('/api', '')}${d.imageUrl}';
       }
     }
   }
