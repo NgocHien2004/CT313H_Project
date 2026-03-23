@@ -16,6 +16,7 @@ class ApiServices {
         baseUrl: AppConfig.apiBaseUrl,
         connectTimeout: const Duration(seconds: 15),
         receiveTimeout: const Duration(seconds: 15),
+        headers: {'ngrok-skip-browser-warning': 'true'},
       ),
     );
 

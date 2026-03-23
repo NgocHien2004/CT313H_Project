@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../../Themes/app_colors.dart';
 import '../../services/api/categories_api.dart';
 import '../../models/category.dart';
+import '../../utils/responsive.dart';
 
 class CategoriesScreen extends StatefulWidget {
   const CategoriesScreen({super.key});
@@ -52,6 +53,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
   }
 
   Future<void> _showForm({Category? cat}) async {
+    final r = Responsive(context);
     final nameCtrl = TextEditingController(text: cat?.name ?? '');
     final descCtrl = TextEditingController(text: cat?.description ?? '');
     final formKey = GlobalKey<FormState>();
@@ -61,84 +63,118 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     await showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setS) => AlertDialog(
-          title: Text(cat == null ? 'Thêm danh mục' : 'Sửa danh mục'),
-          content: Form(
-            key: formKey,
+        builder: (ctx, setS) => Dialog(
+          insetPadding: EdgeInsets.symmetric(
+            horizontal: r.isTablet ? r.screenWidth * 0.2 : 24,
+            vertical: r.isTablet ? 40 : 24,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(r.isTablet ? 28 : 20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (formErr != null) _errBox(formErr!),
-                _field(
-                  label: 'Tên danh mục',
-                  placeholder: 'Nhập tên danh mục',
-                  controller: nameCtrl,
-                  validator: (v) =>
-                      (v == null || v.isEmpty) ? 'Vui lòng nhập tên' : null,
+                Text(
+                  cat == null ? 'Thêm danh mục' : 'Sửa danh mục',
+                  style: TextStyle(
+                    fontSize: r.sp(18),
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-                const SizedBox(height: 12),
-                _field(
-                  label: 'Mô tả',
-                  placeholder: 'Nhập mô tả (tùy chọn)',
-                  controller: descCtrl,
-                  maxLines: 3,
+                SizedBox(height: r.isTablet ? 20 : 16),
+                Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (formErr != null) _errBox(r, formErr!),
+                      _field(
+                        r: r,
+                        label: 'Tên danh mục',
+                        placeholder: 'Nhập tên danh mục',
+                        controller: nameCtrl,
+                        validator: (v) => (v == null || v.isEmpty)
+                            ? 'Vui lòng nhập tên'
+                            : null,
+                      ),
+                      SizedBox(height: r.isTablet ? 16 : 12),
+                      _field(
+                        r: r,
+                        label: 'Mô tả',
+                        placeholder: 'Nhập mô tả (tùy chọn)',
+                        controller: descCtrl,
+                        maxLines: 3,
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: r.isTablet ? 24 : 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: Text('Hủy', style: TextStyle(fontSize: r.sp(14))),
+                    ),
+                    SizedBox(width: r.isTablet ? 12 : 8),
+                    ElevatedButton(
+                      onPressed: saving
+                          ? null
+                          : () async {
+                              if (!formKey.currentState!.validate()) return;
+                              setS(() {
+                                saving = true;
+                                formErr = null;
+                              });
+                              try {
+                                final data = {
+                                  'name': nameCtrl.text.trim(),
+                                  'description': descCtrl.text.trim(),
+                                };
+                                if (cat == null) {
+                                  await _api.create(data);
+                                } else {
+                                  await _api.update(_id(cat.id), data);
+                                }
+                                if (ctx.mounted) Navigator.pop(ctx);
+                                _load();
+                              } on DioException catch (e) {
+                                setS(
+                                  () => formErr =
+                                      (e.response?.data as Map?)?['error']
+                                          ?.toString() ??
+                                      'Lỗi lưu dữ liệu',
+                                );
+                              } finally {
+                                setS(() => saving = false);
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary600,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: saving
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              cat == null ? 'Thêm' : 'Lưu',
+                              style: TextStyle(fontSize: r.sp(14)),
+                            ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Hủy'),
-            ),
-            ElevatedButton(
-              onPressed: saving
-                  ? null
-                  : () async {
-                      if (!formKey.currentState!.validate()) return;
-                      setS(() {
-                        saving = true;
-                        formErr = null;
-                      });
-                      try {
-                        final data = {
-                          'name': nameCtrl.text.trim(),
-                          'description': descCtrl.text.trim(),
-                        };
-                        if (cat == null) {
-                          await _api.create(data);
-                        } else {
-                          await _api.update(_id(cat.id), data);
-                        }
-                        if (ctx.mounted) Navigator.pop(ctx);
-                        _load();
-                      } on DioException catch (e) {
-                        setS(
-                          () => formErr =
-                              (e.response?.data as Map?)?['error']
-                                  ?.toString() ??
-                              'Lỗi lưu dữ liệu',
-                        );
-                      } finally {
-                        setS(() => saving = false);
-                      }
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary600,
-                foregroundColor: Colors.white,
-              ),
-              child: saving
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Text(cat == null ? 'Thêm' : 'Lưu'),
-            ),
-          ],
         ),
       ),
     );
@@ -150,8 +186,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Xác nhận xóa'),
         content: Text(
-          'Bạn có chắc muốn xóa danh mục "${cat.name}"?\n'
-          'Hành động này không thể hoàn tác.',
+          'Bạn có chắc muốn xóa danh mục "${cat.name}"?\nHành động này không thể hoàn tác.',
         ),
         actions: [
           TextButton(
@@ -185,7 +220,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     }
   }
 
-  Widget _errBox(String msg) => Container(
+  Widget _errBox(Responsive r, String msg) => Container(
     margin: const EdgeInsets.only(bottom: 12),
     padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
@@ -193,10 +228,14 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
       borderRadius: BorderRadius.circular(6),
       border: Border.all(color: Colors.red.shade200),
     ),
-    child: Text(msg, style: TextStyle(fontSize: 14, color: AppColors.red700)),
+    child: Text(
+      msg,
+      style: TextStyle(fontSize: r.sp(14), color: AppColors.red700),
+    ),
   );
 
   Widget _field({
+    required Responsive r,
     required String label,
     required String placeholder,
     required TextEditingController controller,
@@ -208,8 +247,8 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 14,
+          style: TextStyle(
+            fontSize: r.sp(14),
             fontWeight: FontWeight.w500,
             color: AppColors.gray700,
           ),
@@ -219,9 +258,10 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
           controller: controller,
           maxLines: maxLines,
           validator: validator,
+          style: TextStyle(fontSize: r.sp(14)),
           decoration: InputDecoration(
             hintText: placeholder,
-            hintStyle: const TextStyle(color: AppColors.gray300),
+            hintStyle: TextStyle(color: AppColors.gray300, fontSize: r.sp(14)),
             filled: true,
             fillColor: Colors.white,
             contentPadding: const EdgeInsets.symmetric(
@@ -259,10 +299,14 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final r = Responsive(context);
     return Scaffold(
       backgroundColor: AppColors.gray50,
       appBar: AppBar(
-        title: Text('Danh mục (${_items.length})'),
+        title: Text(
+          'Danh mục (${_items.length})',
+          style: TextStyle(fontSize: r.sp(16)),
+        ),
         backgroundColor: Colors.white,
         foregroundColor: AppColors.gray900,
         elevation: 0,
@@ -276,14 +320,12 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),
-      body: _buildBody(),
+      body: _buildBody(r),
     );
   }
 
-  Widget _buildBody() {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+  Widget _buildBody(Responsive r) {
+    if (_isLoading) return const Center(child: CircularProgressIndicator());
     if (_error != null) {
       return Center(
         child: Column(
@@ -291,9 +333,9 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
           children: [
             Text(
               _error!,
-              style: const TextStyle(fontSize: 16, color: AppColors.gray600),
+              style: TextStyle(fontSize: r.sp(16), color: AppColors.gray600),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: r.isTablet ? 20 : 16),
             ElevatedButton(onPressed: _load, child: const Text('Thử lại')),
           ],
         ),
@@ -310,10 +352,10 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
               color: AppColors.gray300,
             ),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               'Chưa có danh mục nào',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: r.sp(16),
                 fontWeight: FontWeight.w600,
                 color: AppColors.gray700,
               ),
@@ -336,47 +378,53 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+        padding: EdgeInsets.fromLTRB(
+          r.horizontalPadding,
+          16,
+          r.horizontalPadding,
+          80,
+        ),
         itemCount: _items.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        separatorBuilder: (_, __) => SizedBox(height: r.itemSpacing),
         itemBuilder: (_, i) {
           final cat = _items[i];
           return Container(
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(r.borderRadius),
               border: Border.all(color: AppColors.gray300),
             ),
             child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 8,
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: r.horizontalPadding,
+                vertical: r.isTablet ? 10 : 8,
               ),
               leading: Container(
-                width: 40,
-                height: 40,
+                width: r.isTablet ? 44 : 40,
+                height: r.isTablet ? 44 : 40,
                 decoration: BoxDecoration(
                   color: AppColors.primary600.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(r.borderRadius),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.category,
                   color: AppColors.primary600,
-                  size: 20,
+                  size: r.iconSize,
                 ),
               ),
               title: Text(
                 cat.name,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w600,
+                  fontSize: r.sp(14),
                   color: AppColors.gray900,
                 ),
               ),
               subtitle: (cat.description != null && cat.description!.isNotEmpty)
                   ? Text(
                       cat.description!,
-                      style: const TextStyle(
-                        fontSize: 13,
+                      style: TextStyle(
+                        fontSize: r.sp(13),
                         color: AppColors.gray600,
                       ),
                       maxLines: 1,
@@ -387,19 +435,19 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.edit_outlined,
                       color: AppColors.primary600,
-                      size: 20,
+                      size: r.iconSize + 2,
                     ),
                     onPressed: () => _showForm(cat: cat),
                     tooltip: 'Sửa',
                   ),
                   IconButton(
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.delete_outline,
                       color: Colors.red,
-                      size: 20,
+                      size: r.iconSize + 2,
                     ),
                     onPressed: () => _delete(cat),
                     tooltip: 'Xóa',

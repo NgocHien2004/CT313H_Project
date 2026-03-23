@@ -5,6 +5,7 @@ import '../../services/api/dish_ingredients_api.dart';
 import '../../services/api/inventory_api.dart';
 import '../../models/dish_ingredient.dart';
 import '../../models/inventory.dart';
+import '../../utils/responsive.dart';
 
 class DishIngredientsScreen extends StatefulWidget {
   final int dishId;
@@ -97,6 +98,7 @@ class _DishIngredientsScreenState extends State<DishIngredientsScreen> {
   }
 
   Future<void> _showForm({DishIngredient? ing}) async {
+    final r = Responsive(context);
     int? selectedInvId = ing?.inventoryId;
     final qtyCtrl = TextEditingController(
       text: ing?.quantityRequired.toStringAsFixed(0) ?? '',
@@ -108,143 +110,178 @@ class _DishIngredientsScreenState extends State<DishIngredientsScreen> {
     await showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setS) => AlertDialog(
-          title: Text(ing == null ? 'Thêm nguyên liệu' : 'Sửa nguyên liệu'),
-          content: Form(
-            key: formKey,
+        builder: (ctx, setS) => Dialog(
+          insetPadding: EdgeInsets.symmetric(
+            horizontal: r.isTablet ? r.screenWidth * 0.2 : 24,
+            vertical: r.isTablet ? 40 : 24,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(r.isTablet ? 28 : 20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (formErr != null) _errBox(formErr!),
-                // Chọn nguyên liệu
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Nguyên liệu',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.gray700,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    DropdownButtonFormField<int>(
-                      value: selectedInvId,
-                      isExpanded: true,
-                      decoration: _inputDeco('Chọn nguyên liệu'),
-                      items: _inventory
-                          .map(
-                            (inv) => DropdownMenuItem(
-                              value: _id(inv.id),
-                              child: Text(
-                                '${inv.name} (${inv.unit ?? ''}) – tồn: ${inv.quantity}',
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: ing == null
-                          ? (v) => setS(() => selectedInvId = v)
-                          : null,
-                      validator: (v) =>
-                          v == null ? 'Vui lòng chọn nguyên liệu' : null,
-                    ),
-                  ],
+                Text(
+                  ing == null ? 'Thêm nguyên liệu' : 'Sửa nguyên liệu',
+                  style: TextStyle(
+                    fontSize: r.sp(18),
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-                const SizedBox(height: 12),
-                // Số lượng
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                SizedBox(height: r.isTablet ? 20 : 16),
+                Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (formErr != null) _errBox(r, formErr!),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Nguyên liệu',
+                            style: TextStyle(
+                              fontSize: r.sp(14),
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.gray700,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          DropdownButtonFormField<int>(
+                            value: selectedInvId,
+                            isExpanded: true,
+                            style: TextStyle(
+                              fontSize: r.sp(14),
+                              color: AppColors.gray900,
+                            ),
+                            decoration: _inputDeco(r, 'Chọn nguyên liệu'),
+                            items: _inventory
+                                .map(
+                                  (inv) => DropdownMenuItem(
+                                    value: _id(inv.id),
+                                    child: Text(
+                                      '${inv.name} (${inv.unit ?? ''}) – tồn: ${inv.quantity}',
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: ing == null
+                                ? (v) => setS(() => selectedInvId = v)
+                                : null,
+                            validator: (v) =>
+                                v == null ? 'Vui lòng chọn nguyên liệu' : null,
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: r.isTablet ? 16 : 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Số lượng cần',
+                            style: TextStyle(
+                              fontSize: r.sp(14),
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.gray700,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          TextFormField(
+                            controller: qtyCtrl,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            style: TextStyle(fontSize: r.sp(14)),
+                            decoration: _inputDeco(r, 'Nhập số lượng'),
+                            validator: (v) {
+                              if (v == null || v.isEmpty) return 'Bắt buộc';
+                              if (double.tryParse(v) == null)
+                                return 'Không hợp lệ';
+                              if ((double.tryParse(v) ?? 0) <= 0)
+                                return 'Phải lớn hơn 0';
+                              return null;
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: r.isTablet ? 24 : 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    const Text(
-                      'Số lượng cần',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.gray700,
-                      ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: Text('Hủy', style: TextStyle(fontSize: r.sp(14))),
                     ),
-                    const SizedBox(height: 6),
-                    TextFormField(
-                      controller: qtyCtrl,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
+                    SizedBox(width: r.isTablet ? 12 : 8),
+                    ElevatedButton(
+                      onPressed: saving
+                          ? null
+                          : () async {
+                              if (!formKey.currentState!.validate()) return;
+                              setS(() {
+                                saving = true;
+                                formErr = null;
+                              });
+                              try {
+                                final data = {
+                                  'dish_id': widget.dishId,
+                                  'inventory_id': selectedInvId,
+                                  'quantity_required': double.parse(
+                                    qtyCtrl.text.trim(),
+                                  ),
+                                };
+                                if (ing == null) {
+                                  await _ingApi.create(data);
+                                } else {
+                                  await _ingApi.update(_id(ing.id), {
+                                    'quantity_required': double.parse(
+                                      qtyCtrl.text.trim(),
+                                    ),
+                                  });
+                                }
+                                if (ctx.mounted) Navigator.pop(ctx);
+                                _loadAll();
+                              } on DioException catch (e) {
+                                setS(
+                                  () => formErr =
+                                      (e.response?.data as Map?)?['error']
+                                          ?.toString() ??
+                                      'Lỗi lưu dữ liệu',
+                                );
+                              } finally {
+                                setS(() => saving = false);
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary600,
+                        foregroundColor: Colors.white,
                       ),
-                      decoration: _inputDeco('Nhập số lượng'),
-                      validator: (v) {
-                        if (v == null || v.isEmpty) return 'Bắt buộc';
-                        if (double.tryParse(v) == null) return 'Không hợp lệ';
-                        if ((double.tryParse(v) ?? 0) <= 0)
-                          return 'Phải lớn hơn 0';
-                        return null;
-                      },
+                      child: saving
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              ing == null ? 'Thêm' : 'Lưu',
+                              style: TextStyle(fontSize: r.sp(14)),
+                            ),
                     ),
                   ],
                 ),
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Hủy'),
-            ),
-            ElevatedButton(
-              onPressed: saving
-                  ? null
-                  : () async {
-                      if (!formKey.currentState!.validate()) return;
-                      setS(() {
-                        saving = true;
-                        formErr = null;
-                      });
-                      try {
-                        final data = {
-                          'dish_id': widget.dishId,
-                          'inventory_id': selectedInvId,
-                          'quantity_required': double.parse(
-                            qtyCtrl.text.trim(),
-                          ),
-                        };
-                        if (ing == null) {
-                          await _ingApi.create(data);
-                        } else {
-                          await _ingApi.update(_id(ing.id), {
-                            'quantity_required': double.parse(
-                              qtyCtrl.text.trim(),
-                            ),
-                          });
-                        }
-                        if (ctx.mounted) Navigator.pop(ctx);
-                        _loadAll();
-                      } on DioException catch (e) {
-                        setS(
-                          () => formErr =
-                              (e.response?.data as Map?)?['error']
-                                  ?.toString() ??
-                              'Lỗi lưu dữ liệu',
-                        );
-                      } finally {
-                        setS(() => saving = false);
-                      }
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary600,
-                foregroundColor: Colors.white,
-              ),
-              child: saving
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Text(ing == null ? 'Thêm' : 'Lưu'),
-            ),
-          ],
         ),
       ),
     );
@@ -256,8 +293,7 @@ class _DishIngredientsScreenState extends State<DishIngredientsScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Xác nhận xóa'),
         content: Text(
-          'Xóa nguyên liệu "${_invName(ing.inventoryId)}" khỏi công thức?\n'
-          'Hành động này không thể hoàn tác.',
+          'Xóa nguyên liệu "${_invName(ing.inventoryId)}" khỏi công thức?\nHành động này không thể hoàn tác.',
         ),
         actions: [
           TextButton(
@@ -291,7 +327,7 @@ class _DishIngredientsScreenState extends State<DishIngredientsScreen> {
     }
   }
 
-  Widget _errBox(String msg) => Container(
+  Widget _errBox(Responsive r, String msg) => Container(
     margin: const EdgeInsets.only(bottom: 12),
     padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
@@ -299,12 +335,15 @@ class _DishIngredientsScreenState extends State<DishIngredientsScreen> {
       borderRadius: BorderRadius.circular(6),
       border: Border.all(color: Colors.red.shade200),
     ),
-    child: Text(msg, style: TextStyle(fontSize: 14, color: AppColors.red700)),
+    child: Text(
+      msg,
+      style: TextStyle(fontSize: r.sp(14), color: AppColors.red700),
+    ),
   );
 
-  InputDecoration _inputDeco(String hint) => InputDecoration(
+  InputDecoration _inputDeco(Responsive r, String hint) => InputDecoration(
     hintText: hint,
-    hintStyle: const TextStyle(color: AppColors.gray300),
+    hintStyle: TextStyle(color: AppColors.gray300, fontSize: r.sp(14)),
     filled: true,
     fillColor: Colors.white,
     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -324,17 +363,18 @@ class _DishIngredientsScreenState extends State<DishIngredientsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final r = Responsive(context);
     return Scaffold(
       backgroundColor: AppColors.gray50,
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Công thức nguyên liệu', style: TextStyle(fontSize: 16)),
+            Text('Công thức nguyên liệu', style: TextStyle(fontSize: r.sp(16))),
             Text(
               widget.dishName,
-              style: const TextStyle(
-                fontSize: 12,
+              style: TextStyle(
+                fontSize: r.sp(12),
                 fontWeight: FontWeight.w400,
                 color: AppColors.gray600,
               ),
@@ -354,11 +394,11 @@ class _DishIngredientsScreenState extends State<DishIngredientsScreen> {
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),
-      body: _buildBody(),
+      body: _buildBody(r),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(Responsive r) {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
     if (_error != null) {
       return Center(
@@ -367,9 +407,9 @@ class _DishIngredientsScreenState extends State<DishIngredientsScreen> {
           children: [
             Text(
               _error!,
-              style: const TextStyle(fontSize: 16, color: AppColors.gray600),
+              style: TextStyle(fontSize: r.sp(16), color: AppColors.gray600),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: r.isTablet ? 20 : 16),
             ElevatedButton(onPressed: _loadAll, child: const Text('Thử lại')),
           ],
         ),
@@ -379,28 +419,31 @@ class _DishIngredientsScreenState extends State<DishIngredientsScreen> {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(Icons.science_outlined, size: 64, color: AppColors.gray300),
-            SizedBox(height: 12),
+          children: [
+            const Icon(
+              Icons.science_outlined,
+              size: 64,
+              color: AppColors.gray300,
+            ),
+            const SizedBox(height: 12),
             Text(
               'Chưa có công thức nào',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: r.sp(16),
                 fontWeight: FontWeight.w600,
                 color: AppColors.gray700,
               ),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
               'Nhấn + để thêm nguyên liệu',
-              style: TextStyle(fontSize: 13, color: AppColors.gray600),
+              style: TextStyle(fontSize: r.sp(13), color: AppColors.gray600),
             ),
           ],
         ),
       );
     }
 
-    // Summary counts
     int sufficient = 0, insufficient = 0, outOfStock = 0;
     for (final ing in _ingredients) {
       final inv = _inventory
@@ -417,24 +460,29 @@ class _DishIngredientsScreenState extends State<DishIngredientsScreen> {
 
     return Column(
       children: [
-        // Summary bar
         Container(
           color: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: EdgeInsets.symmetric(
+            horizontal: r.horizontalPadding,
+            vertical: 10,
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _summaryChip(
+                r,
                 'Đủ: $sufficient',
                 AppColors.green700,
                 AppColors.green50,
               ),
               _summaryChip(
+                r,
                 'Thiếu: $insufficient',
                 const Color(0xFFD97706),
                 const Color(0xFFFEF3C7),
               ),
               _summaryChip(
+                r,
                 'Hết: $outOfStock',
                 AppColors.red700,
                 AppColors.red50,
@@ -446,9 +494,14 @@ class _DishIngredientsScreenState extends State<DishIngredientsScreen> {
           child: RefreshIndicator(
             onRefresh: _loadAll,
             child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+              padding: EdgeInsets.fromLTRB(
+                r.horizontalPadding,
+                16,
+                r.horizontalPadding,
+                80,
+              ),
               itemCount: _ingredients.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              separatorBuilder: (_, __) => SizedBox(height: r.itemSpacing),
               itemBuilder: (_, i) {
                 final ing = _ingredients[i];
                 final color = _stockColor(
@@ -458,27 +511,32 @@ class _DishIngredientsScreenState extends State<DishIngredientsScreen> {
                 return Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(r.borderRadius),
                     border: Border.all(color: AppColors.gray300),
                   ),
                   child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: r.horizontalPadding,
+                      vertical: r.isTablet ? 10 : 8,
                     ),
                     leading: Container(
-                      width: 40,
-                      height: 40,
+                      width: r.isTablet ? 44 : 40,
+                      height: r.isTablet ? 44 : 40,
                       decoration: BoxDecoration(
                         color: color.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(r.borderRadius),
                       ),
-                      child: Icon(Icons.science, color: color, size: 20),
+                      child: Icon(
+                        Icons.science,
+                        color: color,
+                        size: r.iconSize + 2,
+                      ),
                     ),
                     title: Text(
                       _invName(ing.inventoryId),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w600,
+                        fontSize: r.sp(14),
                         color: AppColors.gray900,
                       ),
                     ),
@@ -488,8 +546,8 @@ class _DishIngredientsScreenState extends State<DishIngredientsScreen> {
                         Text(
                           'Cần: ${ing.quantityRequired.toStringAsFixed(ing.quantityRequired % 1 == 0 ? 0 : 1)} '
                           '${_invUnit(ing.inventoryId)}',
-                          style: const TextStyle(
-                            fontSize: 13,
+                          style: TextStyle(
+                            fontSize: r.sp(13),
                             color: AppColors.gray600,
                           ),
                         ),
@@ -497,7 +555,7 @@ class _DishIngredientsScreenState extends State<DishIngredientsScreen> {
                         Text(
                           _stockStatus(ing.inventoryId, ing.quantityRequired),
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: r.sp(12),
                             fontWeight: FontWeight.w600,
                             color: color,
                           ),
@@ -508,10 +566,10 @@ class _DishIngredientsScreenState extends State<DishIngredientsScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.edit_outlined,
                             color: AppColors.primary600,
-                            size: 20,
+                            size: r.iconSize + 2,
                           ),
                           onPressed: () => _showForm(ing: ing),
                           padding: EdgeInsets.zero,
@@ -521,10 +579,10 @@ class _DishIngredientsScreenState extends State<DishIngredientsScreen> {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.delete_outline,
                             color: Colors.red,
-                            size: 20,
+                            size: r.iconSize + 2,
                           ),
                           onPressed: () => _delete(ing),
                           padding: EdgeInsets.zero,
@@ -545,16 +603,24 @@ class _DishIngredientsScreenState extends State<DishIngredientsScreen> {
     );
   }
 
-  Widget _summaryChip(String label, Color fg, Color bg) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-    decoration: BoxDecoration(
-      color: bg,
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: fg.withOpacity(0.3)),
-    ),
-    child: Text(
-      label,
-      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: fg),
-    ),
-  );
+  Widget _summaryChip(Responsive r, String label, Color fg, Color bg) =>
+      Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: r.isTablet ? 14 : 10,
+          vertical: r.isTablet ? 7 : 5,
+        ),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: fg.withOpacity(0.3)),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: r.sp(12),
+            fontWeight: FontWeight.w600,
+            color: fg,
+          ),
+        ),
+      );
 }

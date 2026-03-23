@@ -9,6 +9,7 @@ import '../services/api/orders_api.dart';
 import '../services/api/reservations_api.dart';
 import '../services/api/user_api.dart';
 import '../routes/route_names.dart';
+import '../utils/responsive.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -41,7 +42,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _loadStats() async {
     if (!mounted) return;
     final isAdmin = context.read<UserProvider>().isAdmin;
-
     setState(() => _loadingStats = true);
     try {
       final results = await Future.wait([
@@ -50,7 +50,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _resApi.getAll(params: {'limit': 1}),
         if (isAdmin) _userApi.getAll(params: {'limit': 1000}),
       ]);
-
       final dishTotal =
           results[0].data['total'] ??
           (results[0].data['data'] as List?)?.length ??
@@ -68,7 +67,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final rawUsers = results[3].data['data'] ?? results[3].data;
         if (rawUsers is List) userTotal = rawUsers.length;
       }
-
       if (!mounted) return;
       setState(() {
         _totalDishes = dishTotal is int
@@ -117,30 +115,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final r = Responsive(context);
     return Consumer<UserProvider>(
       builder: (context, userProvider, _) {
         final userName = userProvider.userName;
         final isAdmin = userProvider.isAdmin;
-
         return Scaffold(
           backgroundColor: AppColors.gray50,
           appBar: AppBar(
             automaticallyImplyLeading: false,
+            toolbarHeight: r.appBarHeight,
             title: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Restaurant Manager',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: r.sp(16),
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
                   ),
                 ),
                 Text(
                   isAdmin ? 'Quản trị viên' : 'Nhân viên',
-                  style: const TextStyle(
-                    fontSize: 11,
+                  style: TextStyle(
+                    fontSize: r.sp(11),
                     fontWeight: FontWeight.w400,
                     color: Colors.white70,
                   ),
@@ -164,51 +163,185 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ],
           ),
-          body: RefreshIndicator(
-            onRefresh: _loadStats,
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildWelcomeCard(userName, isAdmin),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Thống kê',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.gray900,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildStatsGrid(isAdmin),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Quản lý',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.gray900,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildNavMenu(isAdmin),
-                  const SizedBox(height: 20),
-                ],
-              ),
-            ),
-          ),
+          body: r.isTablet && r.isLandscape
+              ? _buildTabletLandscape(r, userName, isAdmin)
+              : _buildScrollBody(r, userName, isAdmin),
         );
       },
     );
   }
 
-  Widget _buildWelcomeCard(String userName, bool isAdmin) {
+  Widget _buildScrollBody(Responsive r, String userName, bool isAdmin) {
+    return RefreshIndicator(
+      onRefresh: _loadStats,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.all(r.horizontalPadding),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: r.isTablet ? 800 : double.infinity,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildWelcomeCard(r, userName, isAdmin),
+                SizedBox(height: r.verticalPadding + 8),
+                Text(
+                  'Thống kê',
+                  style: TextStyle(
+                    fontSize: r.sp(16),
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.gray900,
+                  ),
+                ),
+                SizedBox(height: r.itemSpacing),
+                _buildStatsGrid(r, isAdmin),
+                SizedBox(height: r.verticalPadding + 8),
+                Text(
+                  'Quản lý',
+                  style: TextStyle(
+                    fontSize: r.sp(16),
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.gray900,
+                  ),
+                ),
+                SizedBox(height: r.itemSpacing),
+                _buildNavMenu(r, isAdmin),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabletLandscape(Responsive r, String userName, bool isAdmin) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 260,
+          child: Container(
+            color: Colors.white,
+            child: Column(
+              children: [
+                _buildSidebarHeader(r, userName, isAdmin),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: _buildNavMenu(r, isAdmin, sidebar: true),
+                  ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(
+                    Icons.logout,
+                    color: AppColors.danger,
+                    size: 20,
+                  ),
+                  title: Text(
+                    'Đăng xuất',
+                    style: TextStyle(
+                      color: AppColors.danger,
+                      fontWeight: FontWeight.w500,
+                      fontSize: r.sp(14),
+                    ),
+                  ),
+                  onTap: _logout,
+                ),
+              ],
+            ),
+          ),
+        ),
+        const VerticalDivider(width: 1, thickness: 1),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _loadStats,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.all(r.horizontalPadding),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildWelcomeCard(r, userName, isAdmin),
+                  SizedBox(height: r.verticalPadding + 8),
+                  Text(
+                    'Thống kê',
+                    style: TextStyle(
+                      fontSize: r.sp(16),
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.gray900,
+                    ),
+                  ),
+                  SizedBox(height: r.itemSpacing),
+                  _buildStatsGrid(r, isAdmin),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSidebarHeader(Responsive r, String userName, bool isAdmin) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppColors.primary, AppColors.secondary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 26,
+            backgroundColor: Colors.white.withOpacity(0.2),
+            child: Text(
+              userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            userName,
+            style: TextStyle(
+              fontSize: r.sp(14),
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              isAdmin ? 'Quản trị viên' : 'Nhân viên',
+              style: TextStyle(fontSize: r.sp(11), color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWelcomeCard(Responsive r, String userName, bool isAdmin) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(r.isTablet ? 24 : 20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [AppColors.primary, AppColors.secondary],
@@ -232,32 +365,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Text(
                   'Chào mừng, $userName!',
-                  style: const TextStyle(
-                    fontSize: 18,
+                  style: TextStyle(
+                    fontSize: r.sp(18),
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Hệ thống quản lý nhà hàng',
-                  style: TextStyle(fontSize: 13, color: Colors.white70),
+                  style: TextStyle(fontSize: r.sp(13), color: Colors.white70),
                 ),
               ],
             ),
           ),
           Container(
-            width: 52,
-            height: 52,
+            width: r.isTablet ? 58 : 52,
+            height: r.isTablet ? 58 : 52,
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(26),
+              borderRadius: BorderRadius.circular(r.isTablet ? 29 : 26),
             ),
             child: Center(
               child: Text(
                 userName.isNotEmpty ? userName[0].toUpperCase() : '?',
-                style: const TextStyle(
-                  fontSize: 22,
+                style: TextStyle(
+                  fontSize: r.sp(22),
                   fontWeight: FontWeight.w800,
                   color: Colors.white,
                 ),
@@ -269,7 +402,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildStatsGrid(bool isAdmin) {
+  Widget _buildStatsGrid(Responsive r, bool isAdmin) {
     final stats = [
       _StatItem(
         'Tổng món ăn',
@@ -296,17 +429,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 1.6,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: r.statsGridColumns,
+        childAspectRatio: r.isTablet ? 1.9 : 1.6,
+        crossAxisSpacing: r.itemSpacing,
+        mainAxisSpacing: r.itemSpacing,
       ),
       itemCount: stats.length,
       itemBuilder: (_, i) {
         final s = stats[i];
         return Container(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(r.isTablet ? 18 : 16),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(10),
@@ -315,15 +448,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Row(
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: r.isTablet ? 44 : 40,
+                height: r.isTablet ? 44 : 40,
                 decoration: BoxDecoration(
                   color: s.color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(s.icon, color: s.color, size: 20),
+                child: Icon(s.icon, color: s.color, size: r.iconSize + 2),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: r.isTablet ? 14 : 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -340,15 +473,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         : Text(
                             '${s.value}',
                             style: TextStyle(
-                              fontSize: 22,
+                              fontSize: r.sp(22),
                               fontWeight: FontWeight.w800,
                               color: s.color,
                             ),
                           ),
                     Text(
                       s.label,
-                      style: const TextStyle(
-                        fontSize: 11,
+                      style: TextStyle(
+                        fontSize: r.sp(11),
                         color: AppColors.gray600,
                       ),
                       maxLines: 1,
@@ -364,7 +497,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildNavMenu(bool isAdmin) {
+  Widget _buildNavMenu(Responsive r, bool isAdmin, {bool sidebar = false}) {
     final items = [
       _NavItem(
         Icons.restaurant_menu,
@@ -411,43 +544,76 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       ],
     ];
-    return Column(children: items.map(_navCard).toList());
-  }
 
-  Widget _navCard(_NavItem item) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.gray300),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        leading: Container(
-          width: 44,
-          height: 44,
+    if (sidebar) {
+      return Column(
+        children: items
+            .map(
+              (item) => ListTile(
+                leading: Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: item.color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(item.icon, color: item.color, size: 18),
+                ),
+                title: Text(
+                  item.label,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    fontSize: r.sp(14),
+                    color: AppColors.gray900,
+                  ),
+                ),
+                onTap: () => context.push(item.route),
+              ),
+            )
+            .toList(),
+      );
+    }
+
+    return Column(
+      children: items.map((item) {
+        return Container(
+          margin: EdgeInsets.only(bottom: r.itemSpacing),
           decoration: BoxDecoration(
-            color: item.color.withOpacity(0.1),
+            color: Colors.white,
             borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.gray300),
           ),
-          child: Icon(item.icon, color: item.color, size: 22),
-        ),
-        title: Text(
-          item.label,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-            color: AppColors.gray900,
+          child: ListTile(
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: r.horizontalPadding,
+              vertical: r.isTablet ? 8 : 6,
+            ),
+            leading: Container(
+              width: r.isTablet ? 48 : 44,
+              height: r.isTablet ? 48 : 44,
+              decoration: BoxDecoration(
+                color: item.color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(item.icon, color: item.color, size: r.iconSize + 4),
+            ),
+            title: Text(
+              item.label,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: r.sp(14),
+                color: AppColors.gray900,
+              ),
+            ),
+            subtitle: Text(
+              item.subtitle,
+              style: TextStyle(fontSize: r.sp(12), color: AppColors.gray600),
+            ),
+            trailing: const Icon(Icons.chevron_right, color: AppColors.gray400),
+            onTap: () => context.push(item.route),
           ),
-        ),
-        subtitle: Text(
-          item.subtitle,
-          style: const TextStyle(fontSize: 12, color: AppColors.gray600),
-        ),
-        trailing: const Icon(Icons.chevron_right, color: AppColors.gray400),
-        onTap: () => context.push(item.route),
-      ),
+        );
+      }).toList(),
     );
   }
 }

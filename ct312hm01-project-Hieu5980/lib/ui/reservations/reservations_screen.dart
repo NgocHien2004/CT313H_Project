@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../../Themes/app_colors.dart';
 import '../../services/api/reservations_api.dart';
 import '../../models/reservation.dart';
+import '../../utils/responsive.dart';
 
 class ReservationsScreen extends StatefulWidget {
   const ReservationsScreen({super.key});
@@ -91,6 +92,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
   }
 
   Future<void> _showForm({Reservation? r}) async {
+    final resp = Responsive(context);
     final nameCtrl = TextEditingController(text: r?.customerName ?? '');
     final phoneCtrl = TextEditingController(text: r?.phoneNumber ?? '');
     final guestCtrl = TextEditingController(
@@ -102,183 +104,225 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
     bool saving = false;
     String? formErr;
 
-    String _fmtDt(DateTime dt) =>
+    String fmtDt(DateTime dt) =>
         '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year} '
         '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
 
     await showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setS) => AlertDialog(
-          title: Text(r == null ? 'Đặt bàn mới' : 'Sửa đặt bàn'),
-          content: SingleChildScrollView(
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (formErr != null) _errBox(formErr!),
-                  _field(
-                    label: 'Tên khách hàng',
-                    placeholder: 'Nhập tên khách hàng',
-                    controller: nameCtrl,
-                    validator: (v) =>
-                        (v == null || v.isEmpty) ? 'Vui lòng nhập tên' : null,
+        builder: (ctx, setS) => Dialog(
+          insetPadding: EdgeInsets.symmetric(
+            horizontal: resp.isTablet ? resp.screenWidth * 0.2 : 24,
+            vertical: resp.isTablet ? 40 : 24,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(resp.isTablet ? 28 : 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  r == null ? 'Đặt bàn mới' : 'Sửa đặt bàn',
+                  style: TextStyle(
+                    fontSize: resp.sp(18),
+                    fontWeight: FontWeight.w700,
                   ),
-                  const SizedBox(height: 12),
-                  _field(
-                    label: 'Số điện thoại',
-                    placeholder: 'Nhập số điện thoại',
-                    controller: phoneCtrl,
-                    keyboard: TextInputType.phone,
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return 'Vui lòng nhập SĐT';
-                      if (v.length < 8) return 'Tối thiểu 8 chữ số';
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  _field(
-                    label: 'Số lượng khách',
-                    placeholder: 'Nhập số lượng khách',
-                    controller: guestCtrl,
-                    keyboard: TextInputType.number,
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return 'Vui lòng nhập';
-                      if ((int.tryParse(v) ?? 0) < 1)
-                        return 'Tối thiểu 1 khách';
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                ),
+                SizedBox(height: resp.isTablet ? 20 : 16),
+                Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text(
-                        'Thời gian đặt bàn',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.gray700,
-                        ),
+                      if (formErr != null) _errBox(resp, formErr!),
+                      _field(
+                        r: resp,
+                        label: 'Tên khách hàng',
+                        placeholder: 'Nhập tên khách hàng',
+                        controller: nameCtrl,
+                        validator: (v) => (v == null || v.isEmpty)
+                            ? 'Vui lòng nhập tên'
+                            : null,
                       ),
-                      const SizedBox(height: 6),
-                      InkWell(
-                        onTap: () async {
-                          final date = await showDatePicker(
-                            context: ctx,
-                            initialDate: selectedDt,
-                            firstDate: DateTime.now(),
-                            lastDate: DateTime.now().add(
-                              const Duration(days: 365),
-                            ),
-                          );
-                          if (date == null) return;
-                          final time = await showTimePicker(
-                            context: ctx,
-                            initialTime: TimeOfDay.fromDateTime(selectedDt),
-                          );
-                          if (time != null) {
-                            setS(
-                              () => selectedDt = DateTime(
-                                date.year,
-                                date.month,
-                                date.day,
-                                time.hour,
-                                time.minute,
-                              ),
-                            );
-                          }
+                      SizedBox(height: resp.isTablet ? 16 : 12),
+                      _field(
+                        r: resp,
+                        label: 'Số điện thoại',
+                        placeholder: 'Nhập số điện thoại',
+                        controller: phoneCtrl,
+                        keyboard: TextInputType.phone,
+                        validator: (v) {
+                          if (v == null || v.isEmpty)
+                            return 'Vui lòng nhập SĐT';
+                          if (v.length < 8) return 'Tối thiểu 8 chữ số';
+                          return null;
                         },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 12,
+                      ),
+                      SizedBox(height: resp.isTablet ? 16 : 12),
+                      _field(
+                        r: resp,
+                        label: 'Số lượng khách',
+                        placeholder: 'Nhập số lượng khách',
+                        controller: guestCtrl,
+                        keyboard: TextInputType.number,
+                        validator: (v) {
+                          if (v == null || v.isEmpty) return 'Vui lòng nhập';
+                          if ((int.tryParse(v) ?? 0) < 1)
+                            return 'Tối thiểu 1 khách';
+                          return null;
+                        },
+                      ),
+                      SizedBox(height: resp.isTablet ? 16 : 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Thời gian đặt bàn',
+                            style: TextStyle(
+                              fontSize: resp.sp(14),
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.gray700,
+                            ),
                           ),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            border: Border.all(color: AppColors.gray300),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.calendar_today,
-                                size: 16,
-                                color: AppColors.gray600,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                _fmtDt(selectedDt),
-                                style: const TextStyle(
-                                  color: AppColors.gray900,
+                          const SizedBox(height: 6),
+                          InkWell(
+                            onTap: () async {
+                              final date = await showDatePicker(
+                                context: ctx,
+                                initialDate: selectedDt,
+                                firstDate: DateTime.now(),
+                                lastDate: DateTime.now().add(
+                                  const Duration(days: 365),
                                 ),
+                              );
+                              if (date == null) return;
+                              final time = await showTimePicker(
+                                context: ctx,
+                                initialTime: TimeOfDay.fromDateTime(selectedDt),
+                              );
+                              if (time != null) {
+                                setS(
+                                  () => selectedDt = DateTime(
+                                    date.year,
+                                    date.month,
+                                    date.day,
+                                    time.hour,
+                                    time.minute,
+                                  ),
+                                );
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 12,
                               ),
-                            ],
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                border: Border.all(color: AppColors.gray300),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.calendar_today,
+                                    size: 16,
+                                    color: AppColors.gray600,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    fmtDt(selectedDt),
+                                    style: TextStyle(
+                                      fontSize: resp.sp(14),
+                                      color: AppColors.gray900,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+                SizedBox(height: resp.isTablet ? 24 : 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: Text(
+                        'Hủy',
+                        style: TextStyle(fontSize: resp.sp(14)),
+                      ),
+                    ),
+                    SizedBox(width: resp.isTablet ? 12 : 8),
+                    ElevatedButton(
+                      onPressed: saving
+                          ? null
+                          : () async {
+                              if (!formKey.currentState!.validate()) return;
+                              setS(() {
+                                saving = true;
+                                formErr = null;
+                              });
+                              try {
+                                final data = {
+                                  'customer_name': nameCtrl.text.trim(),
+                                  'phone_number': phoneCtrl.text.trim(),
+                                  'number_of_guests': int.parse(
+                                    guestCtrl.text.trim(),
+                                  ),
+                                  'reservation_time': selectedDt
+                                      .toIso8601String(),
+                                };
+                                if (r == null) {
+                                  await _api.create(data);
+                                } else {
+                                  await _api.update(_id(r.id), data);
+                                }
+                                if (ctx.mounted) Navigator.pop(ctx);
+                                _load();
+                              } on DioException catch (e) {
+                                final err = e.response?.data;
+                                setS(
+                                  () => formErr =
+                                      (err is Map ? err['error'] : null)
+                                          ?.toString() ??
+                                      'Lỗi lưu dữ liệu',
+                                );
+                              } finally {
+                                setS(() => saving = false);
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary600,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: saving
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(
+                              r == null ? 'Đặt bàn' : 'Lưu',
+                              style: TextStyle(fontSize: resp.sp(14)),
+                            ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Hủy'),
-            ),
-            ElevatedButton(
-              onPressed: saving
-                  ? null
-                  : () async {
-                      if (!formKey.currentState!.validate()) return;
-                      setS(() {
-                        saving = true;
-                        formErr = null;
-                      });
-                      try {
-                        final data = {
-                          'customer_name': nameCtrl.text.trim(),
-                          'phone_number': phoneCtrl.text.trim(),
-                          'number_of_guests': int.parse(guestCtrl.text.trim()),
-                          'reservation_time': selectedDt.toIso8601String(),
-                        };
-                        if (r == null) {
-                          await _api.create(data);
-                        } else {
-                          await _api.update(_id(r.id), data);
-                        }
-                        if (ctx.mounted) Navigator.pop(ctx);
-                        _load();
-                      } on DioException catch (e) {
-                        final err = e.response?.data;
-                        setS(
-                          () => formErr =
-                              (err is Map ? err['error'] : null)?.toString() ??
-                              'Lỗi lưu dữ liệu',
-                        );
-                      } finally {
-                        setS(() => saving = false);
-                      }
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary600,
-                foregroundColor: Colors.white,
-              ),
-              child: saving
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Text(r == null ? 'Đặt bàn' : 'Lưu'),
-            ),
-          ],
         ),
       ),
     );
@@ -290,8 +334,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Xác nhận xóa'),
         content: Text(
-          'Bạn có chắc muốn xóa đặt bàn của "${r.customerName}"?\n'
-          'Hành động này không thể hoàn tác.',
+          'Bạn có chắc muốn xóa đặt bàn của "${r.customerName}"?\nHành động này không thể hoàn tác.',
         ),
         actions: [
           TextButton(
@@ -325,7 +368,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
     }
   }
 
-  Widget _errBox(String msg) => Container(
+  Widget _errBox(Responsive r, String msg) => Container(
     margin: const EdgeInsets.only(bottom: 12),
     padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
@@ -333,10 +376,14 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
       borderRadius: BorderRadius.circular(6),
       border: Border.all(color: Colors.red.shade200),
     ),
-    child: Text(msg, style: TextStyle(fontSize: 14, color: AppColors.red700)),
+    child: Text(
+      msg,
+      style: TextStyle(fontSize: r.sp(14), color: AppColors.red700),
+    ),
   );
 
   Widget _field({
+    required Responsive r,
     required String label,
     required String placeholder,
     required TextEditingController controller,
@@ -348,8 +395,8 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 14,
+          style: TextStyle(
+            fontSize: r.sp(14),
             fontWeight: FontWeight.w500,
             color: AppColors.gray700,
           ),
@@ -359,9 +406,10 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
           controller: controller,
           keyboardType: keyboard,
           validator: validator,
+          style: TextStyle(fontSize: r.sp(14)),
           decoration: InputDecoration(
             hintText: placeholder,
-            hintStyle: const TextStyle(color: AppColors.gray300),
+            hintStyle: TextStyle(color: AppColors.gray300, fontSize: r.sp(14)),
             filled: true,
             fillColor: Colors.white,
             contentPadding: const EdgeInsets.symmetric(
@@ -397,7 +445,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
     );
   }
 
-  Widget _statusBadge(String status) {
+  Widget _statusBadge(Responsive r, String status) {
     Color bg;
     Color fg;
     String label;
@@ -431,7 +479,11 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
       ),
       child: Text(
         label,
-        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: fg),
+        style: TextStyle(
+          fontSize: r.sp(11),
+          fontWeight: FontWeight.w600,
+          color: fg,
+        ),
       ),
     );
   }
@@ -442,10 +494,14 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final r = Responsive(context);
     return Scaffold(
       backgroundColor: AppColors.gray50,
       appBar: AppBar(
-        title: Text('Đặt bàn (${_items.length})'),
+        title: Text(
+          'Đặt bàn (${_items.length})',
+          style: TextStyle(fontSize: r.sp(16)),
+        ),
         backgroundColor: Colors.white,
         foregroundColor: AppColors.gray900,
         elevation: 0,
@@ -463,7 +519,12 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
         children: [
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            padding: EdgeInsets.fromLTRB(
+              r.horizontalPadding,
+              8,
+              r.horizontalPadding,
+              12,
+            ),
             child: Column(
               children: [
                 SingleChildScrollView(
@@ -481,7 +542,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                           child: FilterChip(
                             label: Text(
                               e.value,
-                              style: const TextStyle(fontSize: 12),
+                              style: TextStyle(fontSize: r.sp(12)),
                             ),
                             selected: _filterStatus == e.key,
                             onSelected: (_) {
@@ -493,7 +554,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                               color: _filterStatus == e.key
                                   ? Colors.white
                                   : AppColors.gray700,
-                              fontSize: 12,
+                              fontSize: r.sp(12),
                             ),
                           ),
                         ),
@@ -509,10 +570,11 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                         child: TextField(
                           controller: _nameCtrl,
                           onChanged: _onNameChanged,
+                          style: TextStyle(fontSize: r.sp(13)),
                           decoration: InputDecoration(
                             hintText: 'Tên khách hàng...',
-                            hintStyle: const TextStyle(
-                              fontSize: 13,
+                            hintStyle: TextStyle(
+                              fontSize: r.sp(13),
                               color: AppColors.gray300,
                             ),
                             prefixIcon: const Icon(
@@ -589,7 +651,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                                 child: Text(
                                   _filterDate.isEmpty ? 'Ngày' : _filterDate,
                                   style: TextStyle(
-                                    fontSize: 13,
+                                    fontSize: r.sp(13),
                                     color: _filterDate.isEmpty
                                         ? AppColors.gray300
                                         : AppColors.gray900,
@@ -619,13 +681,13 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
               ],
             ),
           ),
-          Expanded(child: _buildList()),
+          Expanded(child: _buildList(r)),
         ],
       ),
     );
   }
 
-  Widget _buildList() {
+  Widget _buildList(Responsive r) {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
     if (_error != null) {
       return Center(
@@ -634,9 +696,9 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
           children: [
             Text(
               _error!,
-              style: const TextStyle(fontSize: 16, color: AppColors.gray600),
+              style: TextStyle(fontSize: r.sp(16), color: AppColors.gray600),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: r.isTablet ? 20 : 16),
             ElevatedButton(onPressed: _load, child: const Text('Thử lại')),
           ],
         ),
@@ -646,17 +708,17 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(
+          children: [
+            const Icon(
               Icons.calendar_today_outlined,
               size: 64,
               color: AppColors.gray300,
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Text(
               'Không có đặt bàn nào',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: r.sp(16),
                 fontWeight: FontWeight.w600,
                 color: AppColors.gray700,
               ),
@@ -669,19 +731,24 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+        padding: EdgeInsets.fromLTRB(
+          r.horizontalPadding,
+          12,
+          r.horizontalPadding,
+          80,
+        ),
         itemCount: _items.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        separatorBuilder: (_, __) => SizedBox(height: r.itemSpacing),
         itemBuilder: (_, i) {
-          final r = _items[i];
+          final res = _items[i];
           return Container(
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(r.borderRadius),
               border: Border.all(color: AppColors.gray300),
             ),
             child: Padding(
-              padding: const EdgeInsets.all(14),
+              padding: EdgeInsets.all(r.isTablet ? 16 : 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -689,18 +756,18 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                     children: [
                       Expanded(
                         child: Text(
-                          r.customerName,
-                          style: const TextStyle(
+                          res.customerName,
+                          style: TextStyle(
                             fontWeight: FontWeight.w700,
-                            fontSize: 15,
+                            fontSize: r.sp(15),
                             color: AppColors.gray900,
                           ),
                         ),
                       ),
-                      _statusBadge(r.status),
+                      _statusBadge(r, res.status),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  SizedBox(height: r.isTablet ? 8 : 6),
                   Row(
                     children: [
                       const Icon(
@@ -710,9 +777,9 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        r.phoneNumber,
-                        style: const TextStyle(
-                          fontSize: 13,
+                        res.phoneNumber,
+                        style: TextStyle(
+                          fontSize: r.sp(13),
                           color: AppColors.gray700,
                         ),
                       ),
@@ -724,9 +791,9 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '${r.numberOfGuests} khách',
-                        style: const TextStyle(
-                          fontSize: 13,
+                        '${res.numberOfGuests} khách',
+                        style: TextStyle(
+                          fontSize: r.sp(13),
                           color: AppColors.gray700,
                         ),
                       ),
@@ -742,41 +809,43 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        _fmtDate(r.reservationTime),
-                        style: const TextStyle(
-                          fontSize: 13,
+                        _fmtDate(res.reservationTime),
+                        style: TextStyle(
+                          fontSize: r.sp(13),
                           color: AppColors.gray700,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: r.isTablet ? 12 : 10),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      if (r.status == 'booked') ...[
+                      if (res.status == 'booked') ...[
                         _actionBtn(
+                          r,
                           'Hoàn thành',
                           AppColors.green50,
                           AppColors.green700,
-                          () => _updateStatus(r, 'done'),
+                          () => _updateStatus(res, 'done'),
                         ),
                         const SizedBox(width: 8),
                         _actionBtn(
+                          r,
                           'Hủy bàn',
                           AppColors.red50,
                           AppColors.red700,
-                          () => _updateStatus(r, 'canceled'),
+                          () => _updateStatus(res, 'canceled'),
                         ),
                         const SizedBox(width: 8),
                       ],
                       IconButton(
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.edit_outlined,
                           color: AppColors.primary600,
-                          size: 20,
+                          size: r.iconSize + 2,
                         ),
-                        onPressed: () => _showForm(r: r),
+                        onPressed: () => _showForm(r: res),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(
                           minWidth: 32,
@@ -795,11 +864,20 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
     );
   }
 
-  Widget _actionBtn(String label, Color bg, Color fg, VoidCallback onTap) {
+  Widget _actionBtn(
+    Responsive r,
+    String label,
+    Color bg,
+    Color fg,
+    VoidCallback onTap,
+  ) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        padding: EdgeInsets.symmetric(
+          horizontal: r.isTablet ? 14 : 10,
+          vertical: r.isTablet ? 7 : 5,
+        ),
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(6),
@@ -808,7 +886,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: r.sp(12),
             fontWeight: FontWeight.w600,
             color: fg,
           ),
