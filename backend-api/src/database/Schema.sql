@@ -1,3 +1,5 @@
+CREATE DATABASE ct313h_project;
+
 -- USERS: Nhân viên, admin
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
@@ -124,3 +126,9 @@ CREATE TRIGGER trigger_update_dish_availability
 AFTER INSERT OR UPDATE OR DELETE ON inventory
 FOR EACH STATEMENT
 EXECUTE FUNCTION update_dish_availability();
+
+UPDATE users SET role = 'admin' WHERE email = 'test@gmail.com';
+
+ALTER TABLE dishes ALTER COLUMN price TYPE NUMERIC(15, 2);
+ALTER TABLE order_items ALTER COLUMN price TYPE NUMERIC(15, 2);
+ALTER TABLE orders ALTER COLUMN total_amount TYPE NUMERIC(15, 2);
