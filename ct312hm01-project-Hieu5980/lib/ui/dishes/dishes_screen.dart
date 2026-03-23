@@ -14,10 +14,13 @@ import '../../models/dish_ingredient.dart';
 import '../../models/inventory.dart';
 
 bool calcDishAvailable(
-  int dishId,
+  Dish dish,
   Map<int, List<DishIngredient>> ingredientMap,
   Map<int, Inventory> inventoryMap,
 ) {
+  if (!dish.isServing) return false;
+
+  final dishId = int.tryParse(dish.id ?? '') ?? 0;
   final ings = ingredientMap[dishId];
   if (ings == null || ings.isEmpty) return true;
   for (final ing in ings) {
@@ -69,6 +72,21 @@ class _DishesScreenState extends State<DishesScreen> {
     return '${b}đ';
   }
 
+  _DishStatus _dishStatus(Dish dish) {
+    if (!dish.isServing) return _DishStatus.notServing;
+    final dishId = _id(dish.id);
+    final ings = _ingMap[dishId];
+    if (ings != null && ings.isNotEmpty) {
+      for (final ing in ings) {
+        final inv = _invMap[ing.inventoryId];
+        if (inv == null || inv.quantity < ing.quantityRequired) {
+          return _DishStatus.missingIngredient;
+        }
+      }
+    }
+    return _DishStatus.available;
+  }
+
   List<Dish> get _filtered {
     var list = _allDishes;
     final q = _searchText.trim().toLowerCase();
@@ -87,7 +105,13 @@ class _DishesScreenState extends State<DishesScreen> {
     }
     if (_filterAvailable.isNotEmpty) {
       final want = _filterAvailable == 'true';
-      list = list.where((d) => _isAvailable(d) == want).toList();
+      list = list
+          .where(
+            (d) => want
+                ? _dishStatus(d) == _DishStatus.available
+                : _dishStatus(d) != _DishStatus.available,
+          )
+          .toList();
     }
     return list;
   }
@@ -206,9 +230,6 @@ class _DishesScreenState extends State<DishesScreen> {
       });
     }
   }
-
-  bool _isAvailable(Dish dish) =>
-      calcDishAvailable(_id(dish.id), _ingMap, _invMap);
 
   String _catName(int catId) =>
       _categories.where((c) => _id(c.id) == catId).firstOrNull?.name ??
@@ -405,7 +426,7 @@ class _DishesScreenState extends State<DishesScreen> {
                           ),
                           DropdownMenuItem(
                             value: 'false',
-                            child: Text('Thiếu NL'),
+                            child: Text('Không có sẵn'),
                           ),
                         ],
                         onChanged: _onAvailableChanged,
@@ -416,9 +437,7 @@ class _DishesScreenState extends State<DishesScreen> {
               ],
             ),
           ),
-
           Expanded(child: _buildGrid(displayed)),
-
           if (!_isLoading && _totalFiltered > _limit)
             Container(
               color: Colors.white,
@@ -510,7 +529,8 @@ class _DishesScreenState extends State<DishesScreen> {
         itemBuilder: (_, i) {
           final dish = dishes[i];
           final url = _imgUrl(dish.imageUrl);
-          final available = _isAvailable(dish);
+          final status = _dishStatus(dish);
+          final available = status == _DishStatus.available;
           final ings = _ingMap[_id(dish.id)] ?? [];
           final missing = ings.where((ing) {
             final inv = _invMap[ing.inventoryId];
@@ -522,7 +542,11 @@ class _DishesScreenState extends State<DishesScreen> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: available ? AppColors.gray300 : Colors.orange.shade300,
+                color: status == _DishStatus.notServing
+                    ? AppColors.danger.withOpacity(0.4)
+                    : status == _DishStatus.missingIngredient
+                    ? Colors.orange.shade300
+                    : AppColors.gray300,
                 width: available ? 1 : 1.5,
               ),
             ),
@@ -566,12 +590,16 @@ class _DishesScreenState extends State<DishesScreen> {
                             vertical: 3,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.orange.shade700,
+                            color: status == _DishStatus.notServing
+                                ? AppColors.danger
+                                : Colors.orange.shade700,
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: const Text(
-                            'Thiếu NL',
-                            style: TextStyle(
+                          child: Text(
+                            status == _DishStatus.notServing
+                                ? 'Không phục vụ'
+                                : 'Thiếu NL',
+                            style: const TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
@@ -581,7 +609,6 @@ class _DishesScreenState extends State<DishesScreen> {
                       ),
                   ],
                 ),
-
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
@@ -619,11 +646,17 @@ class _DishesScreenState extends State<DishesScreen> {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        if (available)
+                        if (status == _DishStatus.available)
                           _badge(
                             'Có sẵn',
                             AppColors.green50,
                             AppColors.green700,
+                          )
+                        else if (status == _DishStatus.notServing)
+                          _badge(
+                            'Không phục vụ',
+                            AppColors.red50,
+                            AppColors.red700,
                           )
                         else ...[
                           _badge(
@@ -651,9 +684,7 @@ class _DishesScreenState extends State<DishesScreen> {
                             ),
                           ],
                         ],
-
                         const Spacer(),
-
                         if (_isAdmin)
                           Row(
                             children: [
@@ -741,6 +772,8 @@ class _DishesScreenState extends State<DishesScreen> {
     fit: BoxFit.cover,
   );
 }
+
+enum _DishStatus { available, missingIngredient, notServing }
 
 class DishFormScreen extends StatefulWidget {
   final Dish? dish;
@@ -1086,6 +1119,68 @@ class _DishFormScreenState extends State<DishFormScreen>
     }
   }
 
+  Future<void> _toggleServing() async {
+    if (!_isEdit) return;
+    final dish = widget.dish!;
+    final newStatus = !dish.isServing;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Xác nhận'),
+        content: Text(
+          newStatus
+              ? 'Chuyển "${dish.name}" sang Phục vụ trở lại?'
+              : 'Chuyển "${dish.name}" sang Không phục vụ?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: newStatus
+                  ? AppColors.green700
+                  : AppColors.danger,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Xác nhận'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _saving = true);
+    try {
+      final fd = FormData.fromMap({'is_serving': newStatus.toString()});
+      await _dishApi.update(_id(dish.id), fd);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              newStatus
+                  ? 'Đã chuyển sang Phục vụ'
+                  : 'Đã chuyển sang Không phục vụ',
+            ),
+            backgroundColor: newStatus ? AppColors.green700 : AppColors.danger,
+          ),
+        );
+        Navigator.pop(context, true);
+      }
+    } on DioException catch (e) {
+      setState(
+        () => _error =
+            (e.response?.data as Map?)?['error']?.toString() ?? 'Lỗi cập nhật',
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   Widget _errBox(String msg) => Container(
     margin: const EdgeInsets.only(bottom: 12),
     padding: const EdgeInsets.all(12),
@@ -1336,6 +1431,7 @@ class _DishFormScreenState extends State<DishFormScreen>
                         v == null ? 'Vui lòng chọn danh mục' : null,
                   ),
                   const SizedBox(height: 24),
+
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -1366,6 +1462,41 @@ class _DishFormScreenState extends State<DishFormScreen>
                             ),
                     ),
                   ),
+
+                  if (_isEdit) ...[
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _saving ? null : _toggleServing,
+                        icon: Icon(
+                          widget.dish!.isServing
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                          size: 18,
+                        ),
+                        label: Text(
+                          widget.dish!.isServing
+                              ? 'Đánh dấu Không phục vụ'
+                              : 'Đánh dấu Phục vụ trở lại',
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: widget.dish!.isServing
+                              ? AppColors.danger
+                              : AppColors.green700,
+                          side: BorderSide(
+                            color: widget.dish!.isServing
+                                ? AppColors.danger
+                                : AppColors.green700,
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

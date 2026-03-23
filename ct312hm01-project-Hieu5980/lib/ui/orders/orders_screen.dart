@@ -354,7 +354,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     ingResults,
                   );
                   final available = dishes
-                      .where((d) => calcDishAvailable(_id(d.id), gMap, iMap))
+                      .where((d) => calcDishAvailable(d, gMap, iMap))
                       .toList();
                   setS(() {
                     allDishes = available;
@@ -390,7 +390,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 20,
@@ -416,7 +415,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     ],
                   ),
                 ),
-
                 Padding(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
                   child: Form(
@@ -470,7 +468,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     ),
                   ),
                 ),
-
                 if (formErr != null)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
@@ -489,9 +486,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                       ),
                     ),
                   ),
-
                 const Divider(height: 1, thickness: 0.5),
-
                 Expanded(
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -672,9 +667,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                           ],
                         ),
                       ),
-
                       Container(width: 0.5, color: AppColors.gray300),
-
                       Expanded(
                         flex: 4,
                         child: Column(
@@ -873,7 +866,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                       }).toList(),
                                     ),
                             ),
-
                             if (cart.isNotEmpty)
                               Container(
                                 padding: const EdgeInsets.fromLTRB(
@@ -918,7 +910,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     ],
                   ),
                 ),
-
                 Container(
                   padding: EdgeInsets.fromLTRB(
                     20,
@@ -1048,20 +1039,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
     child: const Icon(Icons.restaurant, size: 16, color: AppColors.gray300),
   );
 
-  Widget _miniPh() => Container(
-    width: 40,
-    height: 40,
-    color: AppColors.gray100,
-    child: const Icon(Icons.restaurant, size: 18, color: AppColors.gray300),
-  );
-
-  Widget _dishPh() => Container(
-    width: 44,
-    height: 44,
-    color: AppColors.gray100,
-    child: const Icon(Icons.restaurant, size: 22, color: AppColors.gray300),
-  );
-
   Future<void> _showDetail(Order order) async {
     List<OrderItem> items = [];
     List<Dish> availDishes = [];
@@ -1134,7 +1111,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     ingResults,
                   );
                   final avail = dishes
-                      .where((d) => calcDishAvailable(_id(d.id), gMap, iMap))
+                      .where((d) => calcDishAvailable(d, gMap, iMap))
                       .toList();
                   for (final d in dishes) {
                     dishNames[_id(d.id)] = d.name;
@@ -1194,7 +1171,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 20,
@@ -1239,9 +1215,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     ],
                   ),
                 ),
-
                 const Divider(height: 1, thickness: 0.5),
-
                 Expanded(
                   child: loadingDetail
                       ? const Center(child: CircularProgressIndicator())
@@ -1494,9 +1468,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                 ],
                               ),
                             ),
-
                             Container(width: 0.5, color: AppColors.gray300),
-
                             Expanded(
                               flex: 4,
                               child: Column(
@@ -1750,7 +1722,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
                           ],
                         ),
                 ),
-
                 Container(
                   padding: EdgeInsets.fromLTRB(
                     16,
@@ -1844,19 +1815,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
       ),
     );
   }
-
-  Widget _detailQtyBtn(IconData icon, VoidCallback onTap) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      width: 28,
-      height: 28,
-      decoration: BoxDecoration(
-        color: AppColors.gray100,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Icon(icon, size: 15, color: AppColors.gray700),
-    ),
-  );
 
   Widget _statusBadge(String status) {
     Color bg;

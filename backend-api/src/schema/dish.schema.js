@@ -25,4 +25,5 @@ exports.updateDishSchema = z2.object({
   category_id: z2.coerce.number().int().optional(),
   image_url: z2.string().url().optional(),
   is_available: booleanTransform.optional(), // Hỗ trợ toggle với transform
+  is_serving: booleanTransform.optional(), // dòng mới nè
 });
